@@ -1,0 +1,201 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+	<RootNamespace>CivilConnection</RootNamespace>
+    <TargetFramework>net48</TargetFramework>
+	  <EnableDynamicLoading>true</EnableDynamicLoading>
+    <Configurations>Debug;Release;2024;2025;2023</Configurations>
+    <AssemblyVersion>7.0.0.0</AssemblyVersion>
+    <FileVersion>7.0.0.0</FileVersion>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>	
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='2023|AnyCPU'">
+	  <DefineConstants>C2023</DefineConstants>
+		<OutputPath>bin\2023\</OutputPath>
+		<DocumentationFile>bin\2023\Autodesk2023.xml</DocumentationFile>
+		<AssemblyName>Autodesk2023</AssemblyName>
+	</PropertyGroup>	
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='2024|AnyCPU'">
+	  <DefineConstants>C2024</DefineConstants>
+		<OutputPath>bin\2024\</OutputPath>
+		<DocumentationFile>bin\2024\Autodesk2024.xml</DocumentationFile>
+		<AssemblyName>Autodesk2024</AssemblyName>
+	</PropertyGroup>		
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='2025|AnyCPU'">
+	  <DefineConstants>C2025</DefineConstants>
+		<OutputPath>bin\2025\</OutputPath>
+		<DocumentationFile>bin\2025\Autodesk2025.xml</DocumentationFile>
+		<TargetFramework>net8.0</TargetFramework>
+		<!--<UseWPF>true</UseWPF>-->
+		<!--<UseWindowsForms>true</UseWindowsForms>-->
+		<AssemblyName>Autodesk2025</AssemblyName>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+		<DefineConstants>C2024</DefineConstants>
+		<OutputPath>bin\2024\</OutputPath>
+		<DocumentationFile>bin\2024\Autodesk2024.xml</DocumentationFile>
+		<AssemblyName>CivilConnection</AssemblyName>
+		
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+		<DefineConstants>C2025</DefineConstants>
+		<OutputPath>bin\2025\</OutputPath>
+		<DocumentationFile>bin\2025\Autodesk2025.xml</DocumentationFile>
+		<AssemblyName>CivilConnection</AssemblyName>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<C3DVersion Condition="'$(Configuration)|$(Platform)'=='2023|AnyCPU'">2023</C3DVersion>
+		<C3DVersion Condition="'$(Configuration)|$(Platform)'=='2024|AnyCPU'">2024</C3DVersion>
+		<C3DVersion Condition="'$(Configuration)|$(Platform)'=='2025|AnyCPU'">2025</C3DVersion>
+	</PropertyGroup>
+	<PropertyGroup>
+		<DynCoreVersion Condition="'$(Configuration)|$(Platform)'=='2023|AnyCPU'">2.13</DynCoreVersion>
+		<DynCoreVersion Condition="'$(Configuration)|$(Platform)'=='2024|AnyCPU'">2.19</DynCoreVersion>
+		<DynCoreVersion Condition="'$(Configuration)|$(Platform)'=='2025|AnyCPU'">3.0</DynCoreVersion>
+	</PropertyGroup>
+	<PropertyGroup>
+		<DynRevitVersion Condition="'$(Configuration)|$(Platform)'=='2023|AnyCPU'">2.13</DynRevitVersion>
+		<DynRevitVersion Condition="'$(Configuration)|$(Platform)'=='2024|AnyCPU'">2.19</DynRevitVersion>
+		<DynRevitVersion Condition="'$(Configuration)|$(Platform)'=='2025|AnyCPU'">3.0</DynRevitVersion>
+	</PropertyGroup>
+	<PropertyGroup>
+		<DynRevitPath Condition="'$(Configuration)|$(Platform)'=='2023|AnyCPU'">C:\Program Files\Autodesk\Revit 2023</DynRevitPath>
+		<DynRevitPath Condition="'$(Configuration)|$(Platform)'=='2024|AnyCPU'">C:\Program Files\Autodesk\Revit 2024</DynRevitPath>
+		<DynRevitPath Condition="'$(Configuration)|$(Platform)'=='2025|AnyCPU'">C:\Program Files\Autodesk\Revit 2025</DynRevitPath>
+	</PropertyGroup>
+	<ItemGroup>
+	  <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Reference Include="Autodesk.AEC.Interop.Base">
+			<HintPath>C:\Program Files\Autodesk\AutoCAD $(C3DVersion)\ACA\Autodesk.AEC.Interop.Base.dll</HintPath>
+			<EmbedInteropTypes>True</EmbedInteropTypes>
+			<Private>True</Private>
+			<SpecificVersion>False</SpecificVersion>
+		</Reference>
+		<Reference Include="Autodesk.AEC.Interop.UIBase">
+			<HintPath>C:\Program Files\Autodesk\AutoCAD $(C3DVersion)\ACA\Autodesk.AEC.Interop.UIBase.dll</HintPath>
+			<EmbedInteropTypes>True</EmbedInteropTypes>
+			<Private>True</Private>
+			<SpecificVersion>False</SpecificVersion>
+		</Reference>		
+		<Reference Include="Autodesk.AECC.Interop.Roadway">
+			<HintPath>C:\Program Files\Autodesk\AutoCAD $(C3DVersion)\C3D\Autodesk.AECC.Interop.Roadway.dll</HintPath>
+			<EmbedInteropTypes>True</EmbedInteropTypes>
+			<Private>True</Private>
+			<SpecificVersion>False</SpecificVersion>
+		</Reference>
+		<Reference Include="Autodesk.AECC.Interop.Land">
+			<HintPath>C:\Program Files\Autodesk\AutoCAD $(C3DVersion)\C3D\Autodesk.AECC.Interop.Land.dll</HintPath>
+			<EmbedInteropTypes>True</EmbedInteropTypes>
+			<Private>True</Private>
+			<SpecificVersion>False</SpecificVersion>
+		</Reference>		
+		<Reference Include="Autodesk.AECC.Interop.UiLand">
+			<HintPath>C:\Program Files\Autodesk\AutoCAD $(C3DVersion)\C3D\Autodesk.AECC.Interop.UiLand.dll</HintPath>
+			<EmbedInteropTypes>True</EmbedInteropTypes>
+			<Private>True</Private>
+			<SpecificVersion>False</SpecificVersion>
+		</Reference>
+		<Reference Include="Autodesk.AECC.Interop.UiRoadway">
+			<HintPath>C:\Program Files\Autodesk\AutoCAD $(C3DVersion)\C3D\Autodesk.AECC.Interop.UiRoadway.dll</HintPath>
+			<EmbedInteropTypes>True</EmbedInteropTypes>
+			<Private>True</Private>
+			<SpecificVersion>False</SpecificVersion>
+		</Reference>
+		<Reference Include="Autodesk.AutoCAD.Interop">
+			<HintPath>C:\Program Files\Autodesk\AutoCAD $(C3DVersion)\Autodesk.AutoCAD.Interop.dll</HintPath>
+			<EmbedInteropTypes>True</EmbedInteropTypes>
+			<Private>True</Private>
+			<SpecificVersion>False</SpecificVersion>
+		</Reference>
+		<Reference Include="Autodesk.AutoCAD.Interop.Common">
+			<HintPath>C:\Program Files\Autodesk\AutoCAD $(C3DVersion)\Autodesk.AutoCAD.Interop.Common.dll</HintPath>
+			<EmbedInteropTypes>True</EmbedInteropTypes>
+			<Private>True</Private>
+			<SpecificVersion>False</SpecificVersion>
+		</Reference>
+		<Reference Include="CoreNodeModels">
+			<HintPath>$(DynRevitPath)\AddIns\DynamoForRevit\nodes\CoreNodeModels.dll</HintPath>
+			<Private>False</Private>
+			<SpecificVersion>False</SpecificVersion>
+		</Reference>
+		<Reference Include="CoreNodeModelsWpf">
+			<HintPath>$(DynRevitPath)\AddIns\DynamoForRevit\nodes\CoreNodeModelsWpf.dll</HintPath>
+			<Private>False</Private>
+			<SpecificVersion>False</SpecificVersion>
+		</Reference>
+		<Reference Include="DSCoreNodes">
+			<HintPath>$(DynRevitPath)\AddIns\DynamoForRevit\DSCoreNodes.dll</HintPath>
+			<Private>False</Private>
+			<SpecificVersion>False</SpecificVersion>
+		</Reference>
+		<Reference Include="DynamoCore">
+			<HintPath>$(DynRevitPath)\AddIns\DynamoForRevit\DynamoCore.dll</HintPath>
+			<Private>False</Private>
+			<SpecificVersion>False</SpecificVersion>
+		</Reference>
+		<Reference Include="DynamoCoreWpf">
+			<HintPath>$(DynRevitPath)\AddIns\DynamoForRevit\DynamoCoreWpf.dll</HintPath>
+			<Private>False</Private>
+			<SpecificVersion>False</SpecificVersion>
+		</Reference>
+		<Reference Include="DynamoRevitDS">
+			<HintPath>$(DynRevitPath)\AddIns\DynamoForRevit\Revit\DynamoRevitDS.dll</HintPath>
+			<Private>False</Private>
+			<SpecificVersion>False</SpecificVersion>
+		</Reference>
+		<Reference Include="DynamoServices">
+			<HintPath>$(DynRevitPath)\AddIns\DynamoForRevit\DynamoServices.dll</HintPath>
+			<Private>False</Private>
+			<SpecificVersion>False</SpecificVersion>
+		</Reference>
+		<Reference Include="NewtonSoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+			<SpecificVersion>False</SpecificVersion>
+			<HintPath>$(DynRevitPath)\AddIns\DynamoForRevit\NewtonSoft.Json.dll</HintPath>
+			<Private>False</Private>
+			<SpecificVersion>False</SpecificVersion>
+		</Reference>
+		<Reference Include="ProtoCore">
+			<HintPath>$(DynRevitPath)\AddIns\DynamoForRevit\ProtoCore.dll</HintPath>
+			<Private>False</Private>
+		</Reference>
+		<Reference Include="ProtoGeometry">
+			<HintPath>$(DynRevitPath)\AddIns\DynamoForRevit\ProtoGeometry.dll</HintPath>
+			<Private>False</Private>
+			<SpecificVersion>False</SpecificVersion>
+		</Reference>
+		<Reference Include="RevitAPI">
+			<HintPath>$(DynRevitPath)\RevitAPI.dll</HintPath>
+			<Private>False</Private>
+			<SpecificVersion>False</SpecificVersion>
+		</Reference>
+		<Reference Include="RevitAPIUI">
+			<HintPath>$(DynRevitPath)\RevitAPIUI.dll</HintPath>
+			<Private>False</Private>
+			<SpecificVersion>False</SpecificVersion>
+		</Reference>
+		<Reference Include="RevitNodes">
+			<HintPath>$(DynRevitPath)\AddIns\DynamoForRevit\Revit\RevitNodes.dll</HintPath>
+			<Private>False</Private>
+			<SpecificVersion>False</SpecificVersion>
+		</Reference>
+		<Reference Include="RevitServices">
+			<HintPath>$(DynRevitPath)\AddIns\DynamoForRevit\Revit\RevitServices.dll</HintPath>
+			<Private>False</Private>
+			<SpecificVersion>False</SpecificVersion>
+		</Reference>
+		<!--<Reference Include="System" />
+		<Reference Include="System.Core" />
+		<Reference Include="System.Windows.Forms"/>		
+		<Reference Include="System.Xml.Linq" />
+		<Reference Include="System.Data.DataSetExtensions" />
+		<Reference Include="Microsoft.CSharp" />
+		<Reference Include="System.Data" />
+		<Reference Include="System.Net.Http" />
+		<Reference Include="System.Xml" />-->
+	</ItemGroup>
+	
+</Project>

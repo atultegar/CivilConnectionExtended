@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.10.34916.146
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Autodesk2024", "Autodesk2024\Autodesk2024.csproj", "{CA37A627-5F5A-41E5-8BD4-34808DF29485}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		2023|AnyCPU = 2023|AnyCPU
+		2024|AnyCPU = 2024|AnyCPU
+		2025|AnyCPU = 2025|AnyCPU
+		Debug|AnyCPU = Debug|AnyCPU
+		Release|AnyCPU = Release|AnyCPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{CA37A627-5F5A-41E5-8BD4-34808DF29485}.2023|AnyCPU.ActiveCfg = 2023|Any CPU
+		{CA37A627-5F5A-41E5-8BD4-34808DF29485}.2023|AnyCPU.Build.0 = 2023|Any CPU
+		{CA37A627-5F5A-41E5-8BD4-34808DF29485}.2024|AnyCPU.ActiveCfg = 2024|Any CPU
+		{CA37A627-5F5A-41E5-8BD4-34808DF29485}.2024|AnyCPU.Build.0 = 2024|Any CPU
+		{CA37A627-5F5A-41E5-8BD4-34808DF29485}.2025|AnyCPU.ActiveCfg = 2025|Any CPU
+		{CA37A627-5F5A-41E5-8BD4-34808DF29485}.2025|AnyCPU.Build.0 = 2025|Any CPU
+		{CA37A627-5F5A-41E5-8BD4-34808DF29485}.Debug|AnyCPU.ActiveCfg = 2024|Any CPU
+		{CA37A627-5F5A-41E5-8BD4-34808DF29485}.Debug|AnyCPU.Build.0 = 2024|Any CPU
+		{CA37A627-5F5A-41E5-8BD4-34808DF29485}.Release|AnyCPU.ActiveCfg = Release|Any CPU
+		{CA37A627-5F5A-41E5-8BD4-34808DF29485}.Release|AnyCPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {E0094915-399F-449C-93AB-483740FBD5F8}
+	EndGlobalSection
+EndGlobal
