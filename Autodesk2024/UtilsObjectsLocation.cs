@@ -1036,7 +1036,7 @@ namespace CivilConnection
                 string excludedId = string.Join(";", excluded.Select(x => x.Id.ToString()));
                 Utils.Log(string.Format("Excluded objects:\n{0}", excludedId));
 
-                //System.Windows.Forms.Clipboard.SetText(excludedId);
+                System.Windows.Forms.Clipboard.SetText(excludedId);
             }
 
             #region MULTIPOINT

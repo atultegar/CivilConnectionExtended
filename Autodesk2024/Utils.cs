@@ -452,55 +452,55 @@ namespace CivilConnection
         /// <param name="doc">The document.</param>
         /// <returns></returns>
         [IsVisibleInDynamoLibrary(false)]
-        //public static Dictionary<string, IList<Point>> GetPointGroups(AeccRoadwayDocument doc)
-        //{
-        //    Utils.Log(string.Format("Utils.GetPointGroups started...", ""));
+        public static Dictionary<string, IList<Point>> GetPointGroups(AeccRoadwayDocument doc)
+        {
+            Utils.Log(string.Format("Utils.GetPointGroups started...", ""));
 
-        //    AeccPointGroups groups = null;
+            AeccPointGroups groups = null;
 
-        //    Dictionary<string, IList<Point>> output = new Dictionary<string, IList<Point>>();
+            Dictionary<string, IList<Point>> output = new Dictionary<string, IList<Point>>();
 
-        //    groups = doc.PointGroups;
+            groups = doc.PointGroups;
 
-        //    if (groups != null)
-        //    {
-        //        Utils.Log("Processing Point Groups...");
+            if (groups != null)
+            {
+                Utils.Log("Processing Point Groups...");
 
-        //        if (groups.Count > 0)
-        //        {
-        //            foreach (AeccPointGroup g in groups)
-        //            {
-        //                Utils.Log(string.Format("Processing Point Group {0}...", g.Name));
+                if (groups.Count > 0)
+                {
+                    foreach (AeccPointGroup g in groups)
+                    {
+                        Utils.Log(string.Format("Processing Point Group {0}...", g.Name));
 
-        //                IList<Point> group = new List<Point>();
+                        IList<Point> group = new List<Point>();
 
-        //                foreach (int i in g.Points)
-        //                {
-        //                    AeccPoint p = doc.Points.Item(i - 1);
+                        foreach (int i in g.Points)
+                        {
+                            AeccPoint p = doc.Points.Item(i - 1);
 
-        //                    Utils.Log(string.Format("Processing Point {0}...", i));
+                            Utils.Log(string.Format("Processing Point {0}...", i));
 
-        //                    Point pt = Point.ByCoordinates(p.Easting, p.Northing, p.Elevation);
+                            Point pt = Point.ByCoordinates(p.Easting, p.Northing, p.Elevation);
 
-        //                    Utils.Log(string.Format("{0} acquired.", pt));
+                            Utils.Log(string.Format("{0} acquired.", pt));
 
-        //                    group.Add(pt);
-        //                }
+                            group.Add(pt);
+                        }
 
-        //                if (group.Count > 0)
-        //                {
-        //                    output.Add(g.Name, group);
+                        if (group.Count > 0)
+                        {
+                            output.Add(g.Name, group);
 
-        //                    Utils.Log(string.Format("Processing Point Group {0} completed.", g.Name));
-        //                }
-        //            }
-        //        }
-        //    }
+                            Utils.Log(string.Format("Processing Point Group {0} completed.", g.Name));
+                        }
+                    }
+                }
+            }
 
-        //    Utils.Log(string.Format("Utils.GetPointGroups completed.", ""));
+            Utils.Log(string.Format("Utils.GetPointGroups completed.", ""));
 
-        //    return output;
-        //}
+            return output;
+        }
 
         // Atul Tegar  -- 20190917
         private class TinCreationData : AeccTinCreationData

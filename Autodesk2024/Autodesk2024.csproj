@@ -25,9 +25,9 @@
 	  <DefineConstants>C2025</DefineConstants>
 		<OutputPath>bin\2025\</OutputPath>
 		<DocumentationFile>bin\2025\Autodesk2025.xml</DocumentationFile>
-		<TargetFramework>net8.0</TargetFramework>
+		<TargetFramework>net8.0-windows</TargetFramework>
 		<!--<UseWPF>true</UseWPF>-->
-		<!--<UseWindowsForms>true</UseWindowsForms>-->
+		<UseWindowsForms>true</UseWindowsForms>
 		<AssemblyName>Autodesk2025</AssemblyName>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -69,6 +69,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		
 		<Reference Include="Autodesk.AEC.Interop.Base">
 			<HintPath>C:\Program Files\Autodesk\AutoCAD $(C3DVersion)\ACA\Autodesk.AEC.Interop.Base.dll</HintPath>
 			<EmbedInteropTypes>True</EmbedInteropTypes>
@@ -126,6 +127,9 @@
 			<HintPath>$(DynRevitPath)\AddIns\DynamoForRevit\nodes\CoreNodeModelsWpf.dll</HintPath>
 			<Private>False</Private>
 			<SpecificVersion>False</SpecificVersion>
+		</Reference>
+		<Reference Include="CustomMarshalers">
+		  <HintPath>C:\Windows\assembly\GAC_64\CustomMarshalers\2.0.0.0__b03f5f7f11d50a3a\CustomMarshalers.dll</HintPath>
 		</Reference>
 		<Reference Include="DSCoreNodes">
 			<HintPath>$(DynRevitPath)\AddIns\DynamoForRevit\DSCoreNodes.dll</HintPath>
@@ -187,7 +191,10 @@
 			<Private>False</Private>
 			<SpecificVersion>False</SpecificVersion>
 		</Reference>
-		<!--<Reference Include="System" />
+		
+	</ItemGroup>
+	<ItemGroup Condition="'$(Configuration)|$(Platform)'=='2023|AnyCPU'">
+		<Reference Include="System" />
 		<Reference Include="System.Core" />
 		<Reference Include="System.Windows.Forms"/>		
 		<Reference Include="System.Xml.Linq" />
@@ -195,7 +202,17 @@
 		<Reference Include="Microsoft.CSharp" />
 		<Reference Include="System.Data" />
 		<Reference Include="System.Net.Http" />
-		<Reference Include="System.Xml" />-->
+		<Reference Include="System.Xml" />		
 	</ItemGroup>
-	
+	<ItemGroup Condition="'$(Configuration)|$(Platform)'=='2024|AnyCPU'">
+		<Reference Include="System" />
+		<Reference Include="System.Core" />
+		<Reference Include="System.Windows.Forms"/>
+		<Reference Include="System.Xml.Linq" />
+		<Reference Include="System.Data.DataSetExtensions" />
+		<Reference Include="Microsoft.CSharp" />
+		<Reference Include="System.Data" />
+		<Reference Include="System.Net.Http" />
+		<Reference Include="System.Xml" />
+	</ItemGroup>	
 </Project>
