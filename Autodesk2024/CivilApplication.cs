@@ -11,9 +11,11 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
 // implied.  See the License for the specific language governing
 // permissions and limitations under the License.
+using Autodesk.AECC.Interop.Land;
 using Autodesk.AECC.Interop.UiRoadway;
 using Autodesk.AutoCAD.Interop;
 using Autodesk.DesignScript.Runtime;
+using Autodesk.Revit.DB;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -167,54 +169,7 @@ namespace CivilConnection
 
             RevitServices.Transactions.TransactionManager.Instance.EnsureInTransaction(revitDoc);
 
-            Autodesk.Revit.DB.Units units = revitDoc.GetUnits();
-
-            var du = this.Documents.First()._document.Settings.DrawingSettings.UnitZoneSettings.DrawingUnits;
-
-            Utils.Log($"CivilApplication.Units started...");
-
-            if (du == Autodesk.AECC.Interop.Land.AeccDrawingUnitType.aeccDrawingUnitMeters)
-            {
-                Utils.Log($"Civil Document in meters");
-
-                units.SetFormatOptions(Autodesk.Revit.DB.SpecTypeId.Length, new Autodesk.Revit.DB.FormatOptions(Autodesk.Revit.DB.UnitTypeId.Meters));
-            }
-            else if (du == Autodesk.AECC.Interop.Land.AeccDrawingUnitType.aeccDrawingUnitDecimeters)
-            {
-                Utils.Log(string.Format("Civil Document in decimeters", ""));
-
-                units.SetFormatOptions(Autodesk.Revit.DB.SpecTypeId.Length, new Autodesk.Revit.DB.FormatOptions(Autodesk.Revit.DB.UnitTypeId.Centimeters));
-            }
-            else if (du == Autodesk.AECC.Interop.Land.AeccDrawingUnitType.aeccDrawingUnitCentimeters)
-            {
-                Utils.Log(string.Format("Civil Document in centimeters", ""));
-
-                units.SetFormatOptions(Autodesk.Revit.DB.SpecTypeId.Length, new Autodesk.Revit.DB.FormatOptions(Autodesk.Revit.DB.UnitTypeId.Centimeters));
-            }
-            else if (du == Autodesk.AECC.Interop.Land.AeccDrawingUnitType.aeccDrawingUnitMillimeters)
-            {
-                Utils.Log(string.Format("Civil Document in millimeters", ""));
-
-                units.SetFormatOptions(Autodesk.Revit.DB.SpecTypeId.Length, new Autodesk.Revit.DB.FormatOptions(Autodesk.Revit.DB.UnitTypeId.Millimeters));
-            }
-            else if (du == Autodesk.AECC.Interop.Land.AeccDrawingUnitType.aeccDrawingUnitFeet)
-            {
-                Utils.Log(string.Format("Civil Document in feet", ""));
-
-                units.SetFormatOptions(Autodesk.Revit.DB.SpecTypeId.Length, new Autodesk.Revit.DB.FormatOptions(Autodesk.Revit.DB.UnitTypeId.Feet));
-            }
-            else if (du == Autodesk.AECC.Interop.Land.AeccDrawingUnitType.aeccDrawingUnitInches)
-            {
-                Utils.Log(string.Format("Civil Document in inches", ""));
-
-                units.SetFormatOptions(Autodesk.Revit.DB.SpecTypeId.Length, new Autodesk.Revit.DB.FormatOptions(Autodesk.Revit.DB.UnitTypeId.Inches));
-            }
-            else
-            {
-                throw new Exception("UNITS ERROR\nThe Civil 3D units of the Active Document are not supported in Revit.\nChange the Civil 3D Units to continue");
-            }
-
-            revitDoc.SetUnits(units);
+            SetUnits(revitDoc);
 
             RevitServices.Transactions.TransactionManager.Instance.TransactionTaskDone();
 
@@ -259,7 +214,6 @@ namespace CivilConnection
             return new CivilApplication();
         }
 
-
         /// <summary>
         /// Writes a message to the log file
         /// </summary>
@@ -280,6 +234,46 @@ namespace CivilConnection
         public override string ToString()
         {
             return $"CivilApplication(ActiveDocument = {this.ActiveDocument.Name})";
+        }
+
+        /// <summary>
+        /// Setting Revit units based on Civil 3D document units
+        /// </summary>
+        /// <param name="revitDoc"></param>
+        /// <exception cref="Exception"></exception>
+        private void SetUnits(Autodesk.Revit.DB.Document revitDoc)
+        {
+            Autodesk.Revit.DB.Units units = revitDoc.GetUnits();
+            var du = this.Documents.First()._document.Settings.DrawingSettings.UnitZoneSettings.DrawingUnits;
+            var distPrecision = this.Documents.First()._document.Settings.DrawingSettings.AmbientSettings.DistanceSettings.Precision.Value;
+            double accuracy = Math.Pow(10, -distPrecision);
+
+            Utils.Log($"CivilApplication.Units started...");
+
+            var unitTypeMapping = new Dictionary<AeccDrawingUnitType, ForgeTypeId>
+            {
+                {AeccDrawingUnitType.aeccDrawingUnitMeters, UnitTypeId.Meters },
+                {AeccDrawingUnitType.aeccDrawingUnitDecimeters, UnitTypeId.Decimeters },
+                {AeccDrawingUnitType.aeccDrawingUnitCentimeters, UnitTypeId.Centimeters },
+                {AeccDrawingUnitType.aeccDrawingUnitMillimeters, UnitTypeId.Millimeters },
+                {AeccDrawingUnitType.aeccDrawingUnitFeet, UnitTypeId.Feet },
+                {AeccDrawingUnitType.aeccDrawingUnitInches, UnitTypeId.Inches }
+            };
+
+            if(unitTypeMapping.TryGetValue(du,out var unitTypeId))
+            {
+                Utils.Log($"Civil Document in {unitTypeId.ToString()}");
+
+                var formatOptions = new FormatOptions(unitTypeId) { Accuracy = accuracy };
+
+                units.SetFormatOptions(SpecTypeId.Length, formatOptions);
+            }
+            else
+            {
+                throw new Exception("UNITS ERROR\nThe Civil 3D units of the Active Document are not supported in Revit.\nChange the Civil 3D Units to continue");
+            }
+
+            revitDoc.SetUnits(units);
         }
     }
 }

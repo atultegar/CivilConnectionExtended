@@ -157,7 +157,7 @@ namespace CivilConnection
                 if (null == outline)
                 {
                     Utils.Log($"Outline is null");
-                    //System.Windows.Forms.MessageBox.Show("Outline is null");
+                    System.Windows.Forms.MessageBox.Show("Outline is null");
                 }
 
                 Element output = null;
