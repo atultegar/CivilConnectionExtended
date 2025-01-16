@@ -34,6 +34,9 @@ using Autodesk.DesignScript.Geometry;
 
 using System.Xml;
 using System.Globalization;
+using Revit.Elements;
+using Microsoft.SqlServer.Server;
+using System.IO;
 
 namespace CivilConnection
 {
@@ -536,6 +539,27 @@ namespace CivilConnection
         }
 
         /// <summary>
+        /// Adds the DB Point.
+        /// </summary>
+        /// <param name="point"></param>
+        /// <returns>Object Handle</returns>
+        public string AddDBPoint(Point point, string layer)
+        {
+            return Utils.AddDBPointByPoint(this._document, point, layer);
+        }
+
+        /// <summary>
+        /// Adds the DB Points.
+        /// </summary>
+        /// <param name="points"></param>
+        /// <param name="layer"></param>
+        /// <returns>Object Handles</returns>
+        public List<string> AddDBPointsByPoints(List<Point> points, List<string> layers)
+        {
+            return Utils.AddDBPointsByPoints(this._document, points, layers);
+        }
+
+        /// <summary>
         /// Adds the civil point group.
         /// </summary>
         /// <param name="points">The points.</param>
@@ -572,6 +596,54 @@ namespace CivilConnection
             return Utils.AddTINSurfaceByPoints(this._document, points, name, layer);
         }
 
+        /// <summary>
+        /// Add PropertySetDefinition to document.
+        /// </summary>
+        /// <param name="path"></param>
+        /// <returns></returns>
+        public string AddPropertySetDefinition(string path)
+        {
+            return Utils.CreatePropertySetDefinition(this._document, path);
+        }
+
+        /// <summary>
+        /// Create propertyset and setting values for objects
+        /// </summary>
+        /// <param name="psetDefinitionName"></param>
+        /// <param name="path"></param>
+        /// <returns></returns>
+        public string CreatePropertySets(string psetDefinitionName, string path)
+        {
+            return Utils.CreatePropertySets(_document, psetDefinitionName, path);
+        }
+
+        public string AddPropertySetToObjects(List<object> objectHandles, List<List<Parameter>> parameters, string propertySetDefName)
+        {
+            string output = string.Empty;
+
+            // Step 1 - GeneratePropSetDefXML
+            string psdOutput = RevitUtils.GeneratePropSetDefXML(parameters.FirstOrDefault(), propertySetDefName); // Error is handled within the function
+
+            if (!Utils.IsFilePath(psdOutput))
+                return psdOutput;
+
+            // Step 2 - AddPropertySetDefinition
+            string psdName = Utils.CreatePropertySetDefinition(this._document, psdOutput);
+
+            if (psdName != propertySetDefName)
+                return psdName;
+
+            // Step 3 - GenerateObjectXML
+            string objXmlOutput = RevitUtils.GenerateObjectXML(objectHandles, parameters);
+
+            if (!Utils.IsFilePath(objXmlOutput))
+                return objXmlOutput;
+
+            // Step 4 - CreatePropertySets
+            output = Utils.CreatePropertySets(this._document,psdName, objXmlOutput);
+
+            return output;
+        }
         #endregion
 
         /// <summary>

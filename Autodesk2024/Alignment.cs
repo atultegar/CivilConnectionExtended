@@ -91,6 +91,18 @@ namespace CivilConnection
             return _alignment.GetStations(AeccStationType.aeccSuperTransPoint, this.Start, this.End).Cast<AeccAlignmentStation>().Select(x => x.Station).ToArray();
         }
 
+        [SupressImportIntoVM]
+        private double[] _GetEquationStations()
+        {
+            return _alignment.GetStations(AeccStationType.aeccEquation, this.Start, this.End).Cast<AeccAlignmentStation>().Select(x => x.Station).ToArray();
+        }
+
+        [SupressImportIntoVM]
+        private double[] _GetStationsAhead()
+        {
+            return _alignment.StationEquations.Cast<AeccStationEquation>().Select(x => x.StationAhead).ToArray();
+        }
+
 
         /// <summary>
         /// Gets the stations of the geometry points.
@@ -118,6 +130,23 @@ namespace CivilConnection
         /// </value>
         /// 
         public double[] SuperTransStations { get { return _GetSuperTransStations(); } }
+
+        /// <summary>
+        /// Gets the stations of the station equations
+        /// </summary>
+        /// <value>
+        /// The Eqaution Stations
+        /// </value>
+        /// 
+        public double[] EquationStations { get { return _GetEquationStations(); } }
+
+        /// <summary>
+        /// Gets the station ahead based on station equations
+        /// </summary>
+        /// <value>
+        /// The Station Ahead at each Station Equation
+        /// </value>
+        public double[] StationAhead { get { return _GetStationsAhead(); } }
 
         #endregion
 
@@ -671,6 +700,42 @@ namespace CivilConnection
             Utils.Log("Alignment.PointByStationOffsetElevation Completed.");
 
             return point;
+        }
+
+        /// <summary>
+        /// Convert station value to absolute station value based on station equations
+        /// </summary>
+        /// <param name="station"></param>
+        /// <returns></returns>
+        public double AbsoluteStation(double station)
+        {
+            int i = 0;
+
+            while (station > StationAhead[i]) 
+            {
+                if (i < StationAhead.Length - 1)
+                {
+                    i++;
+                }
+                else
+                {
+                    break;
+                }
+            }
+            double distance = station - StationAhead[i - 1];
+            double stationValue = EquationStations[i - 1] + distance;
+
+            return stationValue;
+        }
+
+        /// <summary>
+        /// Convert absolute station value to normal station value
+        /// </summary>
+        /// <param name="absStation"></param>
+        /// <returns></returns>
+        public string StationFromAbsoluteStation(double absStation)
+        {
+            return _alignment.GetStationStringWithEquations(absStation);
         }
 
         /// <summary>

@@ -248,6 +248,22 @@ namespace CivilConnection
         }
 
         /// <summary>
+        /// Creates the shapepoint
+        /// </summary>
+        /// <param name="featureline"></param>
+        /// <param name="station"></param>
+        /// <returns>
+        /// The ShapePoint
+        /// </returns>
+        public static ShapePoint ByFeaturelineStation(Featureline featureline, double station)
+        {
+            Point point = featureline.PointAtStation(station);
+            ShapePoint sp = new ShapePoint(point, featureline);
+
+            return sp;
+        }
+
+        /// <summary>
         /// Copies this instance.
         /// </summary>
         /// <returns></returns>
