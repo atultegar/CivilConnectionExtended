@@ -5,20 +5,22 @@
     <TargetFramework>net48</TargetFramework>
 	  <EnableDynamicLoading>true</EnableDynamicLoading>
     <Configurations>Debug;Release;2024;2025;2023</Configurations>
-    <AssemblyVersion>7.0.0.0</AssemblyVersion>
-    <FileVersion>7.0.0.0</FileVersion>
+    <AssemblyVersion>7.2.0.0</AssemblyVersion>
+    <FileVersion>7.2.0.0</FileVersion>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>	
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='2023|AnyCPU'">
 	  <DefineConstants>C2023</DefineConstants>
 		<OutputPath>bin\2023\</OutputPath>
 		<DocumentationFile>bin\2023\Autodesk2023.xml</DocumentationFile>
+		<TargetFramework>net48</TargetFramework>
 		<AssemblyName>Autodesk2023</AssemblyName>
 	</PropertyGroup>	
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='2024|AnyCPU'">
 	  <DefineConstants>C2024</DefineConstants>
 		<OutputPath>bin\2024\</OutputPath>
 		<DocumentationFile>bin\2024\Autodesk2024.xml</DocumentationFile>
+		<TargetFramework>net48</TargetFramework>
 		<AssemblyName>Autodesk2024</AssemblyName>
 	</PropertyGroup>		
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='2025|AnyCPU'">
@@ -29,6 +31,7 @@
 		<!--<UseWPF>true</UseWPF>-->
 		<UseWindowsForms>true</UseWindowsForms>
 		<AssemblyName>Autodesk2025</AssemblyName>
+		<WarningLevel>4</WarningLevel>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
 		<DefineConstants>C2024</DefineConstants>
@@ -69,6 +72,20 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		
+		<Reference Include="Acdbmgd">
+			<HintPath>C:\Program Files\Autodesk\AutoCAD $(C3DVersion)\acdbmgd.dll</HintPath>
+			<EmbedInteropTypes>False</EmbedInteropTypes>
+			<Private>True</Private>
+			<SpecificVersion>False</SpecificVersion>
+		</Reference>
+		
+		<Reference Include="AecPropDataMgd">
+			<HintPath>C:\Program Files\Autodesk\AutoCAD $(C3DVersion)\ACA\AecPropDataMgd.dll</HintPath>
+			<EmbedInteropTypes>False</EmbedInteropTypes>
+			<Private>True</Private>
+			<SpecificVersion>False</SpecificVersion>			
+		</Reference>
 		
 		<Reference Include="Autodesk.AEC.Interop.Base">
 			<HintPath>C:\Program Files\Autodesk\AutoCAD $(C3DVersion)\ACA\Autodesk.AEC.Interop.Base.dll</HintPath>
@@ -196,7 +213,7 @@
 	<ItemGroup Condition="'$(Configuration)|$(Platform)'=='2023|AnyCPU'">
 		<Reference Include="System" />
 		<Reference Include="System.Core" />
-		<Reference Include="System.Windows.Forms"/>		
+		<Reference Include="System.Windows.Forms" />		
 		<Reference Include="System.Xml.Linq" />
 		<Reference Include="System.Data.DataSetExtensions" />
 		<Reference Include="Microsoft.CSharp" />
@@ -207,7 +224,7 @@
 	<ItemGroup Condition="'$(Configuration)|$(Platform)'=='2024|AnyCPU'">
 		<Reference Include="System" />
 		<Reference Include="System.Core" />
-		<Reference Include="System.Windows.Forms"/>
+		<Reference Include="System.Windows.Forms" />
 		<Reference Include="System.Xml.Linq" />
 		<Reference Include="System.Data.DataSetExtensions" />
 		<Reference Include="Microsoft.CSharp" />

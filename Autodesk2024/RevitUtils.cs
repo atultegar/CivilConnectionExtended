@@ -23,10 +23,13 @@ using Revit.GeometryConversion;
 using RevitServices.Persistence;
 using RevitServices.Transactions;
 using System;
+using System.CodeDom;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Text.RegularExpressions;
+using System.Xml.Linq;
 using ADSK_Parameters = CivilConnection.UtilsObjectsLocation.ADSK_Parameters;
 
 
@@ -1630,6 +1633,125 @@ namespace CivilConnection
         public static Wall WallBySurface(Surface surface, WallType wallType, bool structural = true)
         {
             return UtilsObjectsLocation.WallBySurface(surface, wallType, structural);
+        }
+
+        /// <summary>
+        /// Generate PropertySetDefinition XML from list of parameters
+        /// </summary>
+        /// <param name="parameters"></param>
+        /// <param name="propertySetName"></param>
+        /// <returns></returns>
+        public static string GeneratePropSetDefXML(List<Parameter> parameters, string propertySetName, string filePath = "")
+        {
+            string output = "";
+            var propertySetDefinition = new XElement("PropertySetDefinition",
+                new XElement("Name", propertySetName),
+                new XElement("PropertyDefinitions",
+                parameters.ConvertAll(param => new XElement("PropertyDefinition",
+                    new XElement("Name", Utils.ConvertToSnakeCase(param.Name)),
+                    new XElement("Description", Utils.ConvertToSnakeCase(param.Name)),
+                    new XElement("DataType", "String")
+                    ))
+                )
+            );
+
+            // Wrap the root in a document
+            var document = new XDocument(
+                new XDeclaration("1.0", "utf-8", "yes"),
+                propertySetDefinition);
+
+            if (string.IsNullOrEmpty(filePath)) 
+            {
+                filePath = Path.Combine(Environment.GetEnvironmentVariable("TMP", EnvironmentVariableTarget.User), $"{propertySetName}.xml");
+            }
+
+            try
+            {
+                // write the XML content to the specified file
+                File.WriteAllText(filePath, document.ToString());
+                output = filePath;
+            }
+            catch (Exception e) 
+            {
+                output = $"An error occured while writing to the file: {e.Message}";
+            }
+
+            return output;
+        }
+
+        public static string GenerateObjectXML(List<object> handles, List<List<Parameter>> objectParameters, string filePath = "")
+        {
+            string output = "";
+            Utils.Log($"Output file name: {filePath}");
+            if (string.IsNullOrEmpty(filePath)) 
+            {
+                filePath = Path.Combine(Environment.GetEnvironmentVariable("TMP", EnvironmentVariableTarget.User), "CivilConn_ObjectProperties.xml");
+                Utils.Log($"Output file name: {filePath}");
+            }
+
+            if (handles.Count != objectParameters.Count)
+            {
+                throw new ArgumentException("The number of object handles must match the number of objects");
+            }
+
+            // Create the root XML element
+            var root = new XElement("Objects");
+            Utils.Log($"Handles count: {handles.Count}");
+
+
+            for (int i = 0; i < handles.Count; i++)
+            {
+                if (handles[i] is string singleHandle)
+                {
+                    // Single handle case
+                    var obj = new XElement("Object", new XAttribute("Handle", singleHandle));
+
+                    foreach (var parameter in objectParameters[i])
+                    {
+                        var paramName = Utils.ConvertToSnakeCase(parameter.Name);
+                        var paramValue = string.IsNullOrEmpty(parameter.Value?.ToString()) ? string.Empty : parameter.Value.ToString();
+                        obj.Add(new XElement(paramName, paramValue));
+                    }
+
+                    root.Add(obj);
+                }
+                else if (handles[i] is List<string> handleList)
+                {
+                    foreach (var subHandle in handleList)
+                    {
+                        var obj = new XElement("Object", new XAttribute("Handle", subHandle));
+
+                        foreach (var parameter in objectParameters[i])
+                        {
+                            var paramName = Utils.ConvertToSnakeCase(parameter.Name);
+                            var paramValue = string.IsNullOrEmpty(parameter.Value?.ToString()) ? string.Empty : parameter.Value.ToString();
+                            obj.Add(new XElement(paramName, paramValue));
+                        }
+
+                        root.Add(obj);
+                    }
+                }
+                else
+                {
+                    Utils.Log($"Invalid handle type at index{i}. Expected string or List<string>");
+                    throw new ArgumentException($"Invalid handle type at index{i}. Expected string or List<string>");
+                }
+            }
+            Utils.Log($"XML string generated...");
+
+            // Write the XML content to the specified file
+            try
+            {
+                File.WriteAllText(filePath, root.ToString());
+                output = filePath;
+            }
+            catch (Exception e) 
+            {
+                output = $"An error occured while writing to the file: {e.Message}";
+            }
+            
+            return output;
+
         }
 
         #endregion

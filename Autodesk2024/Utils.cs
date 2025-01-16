@@ -38,6 +38,9 @@ using Autodesk.Revit.UI.Events;
 using Dynamo.Wpf.Utilities;
 using Point = Autodesk.DesignScript.Geometry.Point;
 using Vector = Autodesk.DesignScript.Geometry.Vector;
+using Autodesk.Aec.PropertyData.DatabaseServices;
+using Autodesk.Revit.UI;
+using System.Text.RegularExpressions;
 
 namespace CivilConnection
 {
@@ -185,6 +188,26 @@ namespace CivilConnection
             }
 
             Utils.Log(string.Format("Utils.AddLayer completed.", ""));
+        }
+
+        public static void AddLayers(AeccRoadwayDocument doc, List<string> layerNames)
+        {
+            Utils.Log(string.Format("Utils.AddLayers started...", ""));
+            List<string> uniqueLayerNames = layerNames.Distinct().ToList();
+
+            AcadDatabase db = doc as AcadDatabase;
+
+            foreach (string layerName in uniqueLayerNames)
+            {
+                bool found = db.Layers.Cast<AcadLayer>().Any(l => l.Name == layerName);
+
+                if (!found)
+                {
+                    db.Layers.Add(layerName);
+                }
+            }
+
+            Utils.Log(string.Format("Utils.AddLayers completed.", ""));
         }
 
 
@@ -371,6 +394,46 @@ namespace CivilConnection
             Utils.Log(string.Format("Utils.AddCivilPointByPoint completed.", ""));
 
             return p.Handle;
+        }
+        
+        [IsVisibleInDynamoLibrary(false)]
+        public static string AddDBPointByPoint(AeccRoadwayDocument doc, Point point, string layer)
+        {
+            Utils.Log(string.Format("Utils.AddDBPointByPoint started...", ""));
+            AddLayer(doc, layer);
+            AcadDatabase db = doc as AcadDatabase;
+            AcadModelSpace ms = db.ModelSpace;
+
+            double[] coordinates = new double[] { point.X, point.Y, point.Z };
+
+            var dbPoint = ms.AddPoint(coordinates);
+            dbPoint.Layer = layer;
+
+            Utils.Log(string.Format("Utils.AddDBPointByPoint completed.", ""));
+            return dbPoint.Handle;
+        }
+
+        [IsVisibleInDynamoLibrary(false)]
+        public static List<string> AddDBPointsByPoints(AeccRoadwayDocument doc, List<Point> points, List<string> layers)
+        {
+            Utils.Log(string.Format("Utils.AddDBPointsByPoints started...", ""));
+
+            List<string> result = new List<string>();
+
+            AddLayers(doc, layers);
+            AcadDatabase db = doc as AcadDatabase;
+            AcadModelSpace ms = db.ModelSpace;
+
+            for (int i = 0; i < points.Count; i++)
+            {
+                double[] coordinates = new double[] { points[i].X, points[i].Y, points[i].Z };
+                var dbPoint = ms.AddPoint(coordinates);
+                dbPoint.Layer = layers[i];
+                result.Add(dbPoint.Handle);
+            }
+
+            Utils.Log(string.Format("Utils.AddDBPointsByPoints completed.", ""));
+            return result;
         }
 
 
@@ -1494,6 +1557,17 @@ namespace CivilConnection
             }
 
             Utils.Log(string.Format("Utils.ImportGeometry completed.", ""));
+
+            return newHandles;
+        }
+
+        // In Progress
+        [IsVisibleInDynamoLibrary(false)]
+        public static IList<string> ImportGeometry(AeccRoadwayDocument doc, Geometry geometry, string layer)
+        {
+            Utils.Log(string.Format("Utils.ImportGeometry started...", ""));
+            IList<string> currentHandles = new List<string>();
+            IList<string> newHandles = new List<string>();
 
             return newHandles;
         }
@@ -2801,7 +2875,7 @@ namespace CivilConnection
             Utils.Log(string.Format("Utils.GetFacesLandXML completed.", ""));
 
             return new Dictionary<string, object>() { { "Points", points }, { "Faces", faces } };
-        }
+        }        
 
         /// <summary>
         /// Recursive function to join surfaces into a PolySurface
@@ -2852,6 +2926,64 @@ namespace CivilConnection
                 return result;
             }
         }
+
+        public static string CreatePropertySetDefinition(AeccRoadwayDocument doc, string path)
+        {
+            string output = "";
+            string fileNameWithoutExt = Path.GetFileNameWithoutExtension(path);
+            try
+            {
+                doc.SendCommand($"-CREATEPROPERTYSETDEFINITION\n{path}\n");
+                output = fileNameWithoutExt;
+            }
+            catch (Exception e) 
+            {
+                output = $"Error: {e.Message}";
+            }
+
+            return output ;
+            
+        }
+
+        public static string CreatePropertySets(AeccRoadwayDocument doc, string psetDefinitionName, string path)
+        {
+            string output = "";
+            try
+            {
+                doc.SendCommand($"-ASSIGNPROPERTYSET\n{psetDefinitionName}\n{path}\n");
+                output = $"PropertySet added successfully";
+            }
+            catch (Exception e)
+            {
+                output = $"Error: {e.Message}";
+            }
+
+            return output;
+        }
+
+        public static string ConvertToSnakeCase(string input)
+        {
+            if (string.IsNullOrWhiteSpace(input))
+                return string.Empty;
+            return Regex.Replace(input.Trim(), @"\s+", "_").ToUpper();
+        }
+
+
+        internal static bool IsFilePath(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path)) return false;
+
+            try
+            {
+                string fullPath = Path.GetFullPath(path);
+                return Path.HasExtension(fullPath) && !string.IsNullOrEmpty(Path.GetFileName(fullPath));
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
 
         // TODO : Create a set of nodes to process directly LandXML files to extract:
         // Surfaces
