@@ -473,6 +473,17 @@ namespace CivilConnection
         }
 
         /// <summary>
+        /// Add lines from Dynamo into the Civil 3D Document.
+        /// </summary>
+        /// <param name="lines"></param>
+        /// <param name="layers"></param>
+        /// <returns></returns>
+        public IList<object> AddLines(List<object> lines, List<string> layers)
+        {
+            return Utils.AddLines(this._document, lines, layers);
+        }
+
+        /// <summary>
         /// Links the geometry associated to a Revit object into Civil 3D.
         /// </summary>
         /// <param name="element">The element.</param>

@@ -41,6 +41,7 @@ using Vector = Autodesk.DesignScript.Geometry.Vector;
 using Autodesk.Aec.PropertyData.DatabaseServices;
 using Autodesk.Revit.UI;
 using System.Text.RegularExpressions;
+using Revit.GeometryConversion;
 
 namespace CivilConnection
 {
@@ -1561,15 +1562,60 @@ namespace CivilConnection
             return newHandles;
         }
 
-        // In Progress
-        [IsVisibleInDynamoLibrary(false)]
-        public static IList<string> ImportGeometry(AeccRoadwayDocument doc, Geometry geometry, string layer)
+        
+        public static IList<object> AddLines(AeccRoadwayDocument doc, List<object> lines, List<string> layers)
         {
-            Utils.Log(string.Format("Utils.ImportGeometry started...", ""));
-            IList<string> currentHandles = new List<string>();
-            IList<string> newHandles = new List<string>();
+            Utils.Log(string.Format("Utils.AddLines started...", ""));
 
-            return newHandles;
+            IList<object> result = new List<object>();
+
+            AddLayers(doc, layers);
+            AcadDatabase db = doc as AcadDatabase;
+            AcadModelSpace ms = db.ModelSpace;
+
+            for (int i =0; i < lines.Count; i++)
+            {
+                if (lines[i] is Line s)
+                {
+                    // Single line case
+                    double[] startPoint = new double[] {s.StartPoint.X, s.StartPoint.Y, s.StartPoint.Z };
+
+
+                    double[] endPoint = new double[] { s.EndPoint.X, s.EndPoint.Y, s.EndPoint.Z };
+
+                    var line = ms.AddLine(startPoint, endPoint);
+
+                    line.Layer = layers[i];
+
+                    result.Add(line.Handle);
+                }
+
+                else if (lines[i] is List<Line> m)
+                {
+                    IList<string> strings = new List<string>();
+                    foreach (var l in m)
+                    {
+                        double[] startPoint = new double[] { l.StartPoint.X, l.StartPoint.Y, l.StartPoint.Z };
+
+
+                        double[] endPoint = new double[] { l.EndPoint.X, l.EndPoint.Y, l.EndPoint.Z };
+
+                        var line = ms.AddLine(startPoint, endPoint);
+
+                        line.Layer = layers[i];
+                        strings.Add(line.Handle);
+                    }
+                    result.Add(strings);
+                }
+                else
+                {
+                    Utils.Log($"Invalid line type or List<Line>... ");
+                    throw new ArgumentException($"Invalid line type at index{i}. Expected Line or List<Line>");
+                }
+            }
+
+            Utils.Log(string.Format("Utils.AddLines completed.", ""));
+            return result;
         }
 
         /// <summary>
