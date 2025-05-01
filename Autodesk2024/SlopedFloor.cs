@@ -219,7 +219,7 @@ namespace CivilConnection
                 {
                     var f = Revit.Elements.Floor.ByOutlineTypeAndLevel(flat, floorType, level);
                     f.InternalElement.Parameters.Cast<Autodesk.Revit.DB.Parameter>()
-                        .First(x => x.Id.IntegerValue.Equals(Autodesk.Revit.DB.BuiltInParameter.FLOOR_PARAM_IS_STRUCTURAL))
+                        .First(x => x.Id.Value.Equals(Autodesk.Revit.DB.BuiltInParameter.FLOOR_PARAM_IS_STRUCTURAL))
                         .Set(structural ? 1 : 0);
 
                     plane.Dispose();

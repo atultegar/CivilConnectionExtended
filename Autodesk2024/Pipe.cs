@@ -150,7 +150,7 @@ namespace CivilConnection.MEP
         /// <param name="type">The type.</param>
         private void InternalSetPipingSystemType(Autodesk.Revit.DB.Plumbing.PipingSystemType type)
         {
-            if (InternalMEPCurve.MEPSystem.GetTypeId().IntegerValue.Equals(type.Id.IntegerValue))
+            if (InternalMEPCurve.MEPSystem.GetTypeId().Value.Equals(type.Id.Value))
                 return;
 
             TransactionManager.Instance.EnsureInTransaction(DocumentManager.Instance.CurrentDBDocument);

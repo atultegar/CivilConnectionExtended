@@ -4,9 +4,9 @@
 	<RootNamespace>CivilConnection</RootNamespace>
     <TargetFramework>net48</TargetFramework>
 	  <EnableDynamicLoading>true</EnableDynamicLoading>
-    <Configurations>Debug;Release;2024;2025;2023</Configurations>
-    <AssemblyVersion>7.2.0.0</AssemblyVersion>
-    <FileVersion>7.2.0.0</FileVersion>
+    <Configurations>Debug;Release;2024;2025;2023;2026</Configurations>
+    <AssemblyVersion>7.3.0.0</AssemblyVersion>
+    <FileVersion>7.3.0.0</FileVersion>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>	
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='2023|AnyCPU'">
@@ -32,6 +32,15 @@
 		<UseWindowsForms>true</UseWindowsForms>
 		<AssemblyName>Autodesk2025</AssemblyName>
 		<WarningLevel>4</WarningLevel>
+	</PropertyGroup>		
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='2026|AnyCPU'">
+	  <DefineConstants>C2026</DefineConstants>
+	  <OutputPath>bin\2026\</OutputPath>
+	  <DocumentationFile>bin\2026\Autodesk2026.xml</DocumentationFile>
+	  <TargetFramework>net8.0-windows</TargetFramework>
+	  <UseWindowsForms>true</UseWindowsForms>
+	  <AssemblyName>Autodesk2026</AssemblyName>
+	  <WarningLevel>4</WarningLevel>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
 		<DefineConstants>C2024</DefineConstants>
@@ -51,21 +60,25 @@
 		<C3DVersion Condition="'$(Configuration)|$(Platform)'=='2023|AnyCPU'">2023</C3DVersion>
 		<C3DVersion Condition="'$(Configuration)|$(Platform)'=='2024|AnyCPU'">2024</C3DVersion>
 		<C3DVersion Condition="'$(Configuration)|$(Platform)'=='2025|AnyCPU'">2025</C3DVersion>
+		<C3DVersion Condition="'$(Configuration)|$(Platform)'=='2026|AnyCPU'">2026</C3DVersion>
 	</PropertyGroup>
 	<PropertyGroup>
 		<DynCoreVersion Condition="'$(Configuration)|$(Platform)'=='2023|AnyCPU'">2.13</DynCoreVersion>
 		<DynCoreVersion Condition="'$(Configuration)|$(Platform)'=='2024|AnyCPU'">2.19</DynCoreVersion>
 		<DynCoreVersion Condition="'$(Configuration)|$(Platform)'=='2025|AnyCPU'">3.0</DynCoreVersion>
+		<DynCoreVersion Condition="'$(Configuration)|$(Platform)'=='2026|AnyCPU'">3.4</DynCoreVersion>
 	</PropertyGroup>
 	<PropertyGroup>
 		<DynRevitVersion Condition="'$(Configuration)|$(Platform)'=='2023|AnyCPU'">2.13</DynRevitVersion>
 		<DynRevitVersion Condition="'$(Configuration)|$(Platform)'=='2024|AnyCPU'">2.19</DynRevitVersion>
 		<DynRevitVersion Condition="'$(Configuration)|$(Platform)'=='2025|AnyCPU'">3.0</DynRevitVersion>
+		<DynRevitVersion Condition="'$(Configuration)|$(Platform)'=='2026|AnyCPU'">3.4</DynRevitVersion>
 	</PropertyGroup>
 	<PropertyGroup>
 		<DynRevitPath Condition="'$(Configuration)|$(Platform)'=='2023|AnyCPU'">C:\Program Files\Autodesk\Revit 2023</DynRevitPath>
 		<DynRevitPath Condition="'$(Configuration)|$(Platform)'=='2024|AnyCPU'">C:\Program Files\Autodesk\Revit 2024</DynRevitPath>
 		<DynRevitPath Condition="'$(Configuration)|$(Platform)'=='2025|AnyCPU'">C:\Program Files\Autodesk\Revit 2025</DynRevitPath>
+		<DynRevitPath Condition="'$(Configuration)|$(Platform)'=='2026|AnyCPU'">C:\Program Files\Autodesk\Revit 2026</DynRevitPath>
 	</PropertyGroup>
 	<ItemGroup>
 	  <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
@@ -146,7 +159,8 @@
 			<SpecificVersion>False</SpecificVersion>
 		</Reference>
 		<Reference Include="CustomMarshalers">
-		  <HintPath>C:\Windows\assembly\GAC_64\CustomMarshalers\2.0.0.0__b03f5f7f11d50a3a\CustomMarshalers.dll</HintPath>
+		  <HintPath>C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8\CustomMarshalers.dll</HintPath>
+		  <Private>True</Private>
 		</Reference>
 		<Reference Include="DSCoreNodes">
 			<HintPath>$(DynRevitPath)\AddIns\DynamoForRevit\DSCoreNodes.dll</HintPath>

@@ -93,8 +93,8 @@ namespace CivilConnection
             return new Autodesk.Revit.DB.FilteredElementCollector(view.Document)
                 .WherePasses(filter)
                 .ToElementIds()
-                .Where<Autodesk.Revit.DB.ElementId>(a => a.IntegerValue
-                                  != view.Id.IntegerValue)
+                .Where<Autodesk.Revit.DB.ElementId>(a => a.Value
+                                  != view.Id.Value)
                 .FirstOrDefault<Autodesk.Revit.DB.ElementId>();
         }
 
@@ -294,7 +294,7 @@ namespace CivilConnection
                 if (depth > 0)
                 {
                     internalSection.Parameters.Cast<Autodesk.Revit.DB.Parameter>()
-                        .First(x => x.Id.IntegerValue.Equals(
+                        .First(x => x.Id.Value.Equals(
                             (int)Autodesk.Revit.DB.BuiltInParameter.VIEWER_BOUND_OFFSET_FAR))
                         .Set(depth);
                 }
@@ -352,7 +352,7 @@ namespace CivilConnection
                     internalPlan.RightDirection.AngleOnPlaneTo(tr.BasisX, Autodesk.Revit.DB.XYZ.BasisZ));
 
                 internalPlan.Parameters.Cast<Autodesk.Revit.DB.Parameter>()
-                        .First(x => x.Id.IntegerValue.Equals(
+                        .First(x => x.Id.Value.Equals(
                             (int)Autodesk.Revit.DB.BuiltInParameter.PLAN_VIEW_NORTH))
                         .Set(0);  // Project North
 
@@ -383,7 +383,7 @@ namespace CivilConnection
                 if (depth > 0)
                 {
                     internalPlan.Parameters.Cast<Autodesk.Revit.DB.Parameter>()
-                        .First(x => x.Id.IntegerValue.Equals(
+                        .First(x => x.Id.Value.Equals(
                             (int)Autodesk.Revit.DB.BuiltInParameter.VIEWER_BOUND_OFFSET_FAR))
                         .Set(depth);
                 }
@@ -831,7 +831,7 @@ namespace CivilConnection
 
             try
             {
-                Utils.Log(string.Format("Element {0} Featureline {1}", element.InternalElement.Id.IntegerValue, featureline.Code));
+                Utils.Log(string.Format("Element {0} Featureline {1}", element.InternalElement.Id.Value, featureline.Code));
 
                 Autodesk.Revit.DB.Document doc = DocumentManager.Instance.CurrentDBDocument;
 
@@ -849,7 +849,7 @@ namespace CivilConnection
                 var totalTransform = RevitUtils.DocumentTotalTransform();
                 var totalTransformInverse = totalTransform.Inverse();
 
-                if (element.InternalElement.Category.Id.IntegerValue.Equals((int)Autodesk.Revit.DB.BuiltInCategory.OST_Floors))
+                if (element.InternalElement.Category.Id.Value.Equals((int)Autodesk.Revit.DB.BuiltInCategory.OST_Floors))
                 {
                     // extract vertices
                     // create multipoint object with featureline
@@ -1011,14 +1011,14 @@ namespace CivilConnection
 
 
                     // TODO: check Revit length units and perform the conversion accordingly
-                    if (element.InternalElement.Category.Id.IntegerValue.Equals((int)Autodesk.Revit.DB.BuiltInCategory.OST_StructuralColumns) ||
-                            element.InternalElement.Category.Id.IntegerValue.Equals((int)Autodesk.Revit.DB.BuiltInCategory.OST_Columns))
+                    if (element.InternalElement.Category.Id.Value.Equals((int)Autodesk.Revit.DB.BuiltInCategory.OST_StructuralColumns) ||
+                            element.InternalElement.Category.Id.Value.Equals((int)Autodesk.Revit.DB.BuiltInCategory.OST_Columns))
                     {
                         Autodesk.Revit.DB.FamilyInstance column = element.InternalElement as Autodesk.Revit.DB.FamilyInstance;
                         if (!column.IsSlantedColumn)
                         {
                             var height = Convert.ToDouble(column.Parameters.Cast<Autodesk.Revit.DB.Parameter>()
-                                .First(x => x.Id.IntegerValue.Equals((int)Autodesk.Revit.DB.BuiltInParameter.INSTANCE_LENGTH_PARAM))
+                                .First(x => x.Id.Value.Equals((int)Autodesk.Revit.DB.BuiltInParameter.INSTANCE_LENGTH_PARAM))
                                 .AsDouble());
                             lpe = lp.Translate(0, 0, Utils.FeetToM(height)) as Point;
                         }
@@ -1290,11 +1290,11 @@ namespace CivilConnection
                 .OfClass(typeof(Autodesk.Revit.DB.RevitLinkInstance))
                 .Cast<Autodesk.Revit.DB.RevitLinkInstance>())
             {
-                var typeId = rli.Parameters.Cast<Autodesk.Revit.DB.Parameter>().First(x => x.Id.IntegerValue.Equals((int)Autodesk.Revit.DB.BuiltInParameter.ELEM_FAMILY_AND_TYPE_PARAM)).AsElementId();
+                var typeId = rli.Parameters.Cast<Autodesk.Revit.DB.Parameter>().First(x => x.Id.Value.Equals((int)Autodesk.Revit.DB.BuiltInParameter.ELEM_FAMILY_AND_TYPE_PARAM)).AsElementId();
                 try
                 {
-                    string typeName = Revit.Elements.ElementSelector.ByElementId(typeId.IntegerValue).Name;
-                    string name = rli.Parameters.Cast<Autodesk.Revit.DB.Parameter>().First(x => x.Id.IntegerValue.Equals((int)Autodesk.Revit.DB.BuiltInParameter.RVT_LINK_INSTANCE_NAME)).AsString();
+                    string typeName = Revit.Elements.ElementSelector.ByElementId(typeId.Value).Name;
+                    string name = rli.Parameters.Cast<Autodesk.Revit.DB.Parameter>().First(x => x.Id.Value.Equals((int)Autodesk.Revit.DB.BuiltInParameter.RVT_LINK_INSTANCE_NAME)).AsString();
                     string corridor = name.Split(new string[] { "_" }, StringSplitOptions.None)[0];
                     string baseline = name.Split(new string[] { "_" }, StringSplitOptions.None)[1];
                     string code = name.Split(new string[] { "_" }, StringSplitOptions.None)[2];

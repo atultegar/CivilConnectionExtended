@@ -81,6 +81,8 @@ namespace CivilConnection
             progids = new string[] { "AeccXUiRoadway.AeccRoadwayApplication.13.6" }; // 2024
 #elif C2025
             progids = new string[] { "AeccXUiRoadway.AeccRoadwayApplication.13.7" }; // 2025
+#elif C2026
+            progids = new string[] { "AeccXUiRoadway.AeccRoadwayApplication.13.8" }; // 2026
 #endif
             AcadApplication m_oAcadApp = null;
             try
