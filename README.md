@@ -1,6 +1,6 @@
 # CivilConnection
 
-**CivilConnection** is a Dynamo package originally developed by **Autodesk** to enable seamless data exchange between **Civil 3D** and **Revit**.
+**CivilConnection** is a Dynamo package originally developed by **Autodesk Consulting** to enable seamless data exchange between **Civil 3D** and **Revit**.
 
 This repository provides an **updated and extended version** maintained by [Atul Tegar](https://github.com/atultegar), featuring new enhancements and compatibility updates for **Revit and Civil 3D 2023-2026**.
 
