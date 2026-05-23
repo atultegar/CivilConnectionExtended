@@ -115,6 +115,11 @@ namespace CivilConnection
                 xmlPath = System.IO.Path.Combine(Environment.GetEnvironmentVariable("TMP", EnvironmentVariableTarget.User), "LandFeatureLinesReport.xml");
             }
 
+            if (!Utils.EnsureCivilPythonInstalled())
+            {
+                return null;
+            }
+
             this.SendCommand("-ExportLandFeatureLinesToXml\n");
 
             DateTime start = DateTime.Now;
@@ -498,6 +503,7 @@ namespace CivilConnection
             try
             {
                 AcadDocument doc = this.InternalElement as AcadDocument;
+
                 doc.SendCommand(command);
             }
             catch (Exception ex)
@@ -617,6 +623,15 @@ namespace CivilConnection
             return Utils.CreatePropertySets(_document, psetDefinitionName, path);
         }
 
+        /// <summary>
+        /// Adds a property set definition to the specified objects using the provided parameters and property set
+        /// definition name.
+        /// </summary>        
+        /// <param name="objectHandles">A list of object handles representing the target objects to which the property set will be applied.</param>
+        /// <param name="parameters">A list of parameter lists, where each inner list contains parameters to be associated with the corresponding
+        /// object.</param>
+        /// <param name="propertySetDefName">The name of the property set definition to create and assign to the objects.</param>
+        /// <returns>Result of the operation. Returns an error message if the operation fails</returns>
         public string AddPropertySetToObjects(List<object> objectHandles, List<List<Parameter>> parameters, string propertySetDefName)
         {
             string output = string.Empty;

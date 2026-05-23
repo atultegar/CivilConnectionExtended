@@ -308,6 +308,12 @@ namespace CivilConnection
 
                 Utils.Log(xmlPath);
 
+                // Check for installation of CivilPython
+                if (!Utils.EnsureCivilPythonInstalled())
+                {
+                    return null;
+                }
+
                 this._baseline._baseline.Alignment.Document.SendCommand(string.Format("-ExportSubassemblyShapesToXML\n{0}\n{1}\n{2}\n", this._baseline._baseline.Corridor.Handle, this._baseline.Index, this.Index));
 
                 DateTime start = DateTime.Now;
@@ -597,6 +603,12 @@ namespace CivilConnection
                 string xmlPath = System.IO.Path.Combine(Environment.GetEnvironmentVariable("TMP", EnvironmentVariableTarget.User), "CorridorLinks.xml");  // Revit 2020 changed the path to the temp at a session level
 
                 Utils.Log(xmlPath);
+
+                // Check for installation of CivilPython
+                if (!Utils.EnsureCivilPythonInstalled())
+                {
+                    return null;
+                }
 
                 this._baseline._baseline.Alignment.Document.SendCommand(string.Format("-ExportSubassemblyLinksToXML\n{0}\n{1}\n{2}\n", this._baseline._baseline.Corridor.Handle, this._baseline.Index, this.Index));
 

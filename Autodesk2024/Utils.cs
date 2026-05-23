@@ -41,6 +41,7 @@ using Vector = Autodesk.DesignScript.Geometry.Vector;
 using Autodesk.Aec.PropertyData.DatabaseServices;
 using Autodesk.Revit.UI;
 using System.Text.RegularExpressions;
+using System.Windows.Forms;
 
 namespace CivilConnection
 {
@@ -1767,6 +1768,11 @@ namespace CivilConnection
             {
                 try
                 {
+                    // Check for installation of CivilPython
+                    if (!Utils.EnsureCivilPythonInstalled())
+                    {
+                        return null;
+                    }
 
                     doc.SendCommand(string.Format("-ReplaceSolid \"{0}\"\n\"{1}\"\n\n", handles, result));
                 }
@@ -2933,6 +2939,12 @@ namespace CivilConnection
             string fileNameWithoutExt = Path.GetFileNameWithoutExtension(path);
             try
             {
+                // Check for installation of CivilPython
+                if (!Utils.EnsureCivilPythonInstalled())
+                {
+                    return null;
+                }
+
                 doc.SendCommand($"-CREATEPROPERTYSETDEFINITION\n{path}\n");
                 output = fileNameWithoutExt;
             }
@@ -2950,6 +2962,12 @@ namespace CivilConnection
             string output = "";
             try
             {
+                // Check for installation of CivilPython
+                if (!Utils.EnsureCivilPythonInstalled())
+                {
+                    return null;
+                }
+
                 doc.SendCommand($"-ASSIGNPROPERTYSET\n{psetDefinitionName}\n{path}\n");
                 output = $"PropertySet added successfully";
             }
@@ -2984,6 +3002,87 @@ namespace CivilConnection
             }
         }
 
+        /// <summary>
+        /// Checks whether the required CivilPython library is installed and available for use.
+        /// </summary>
+        /// <remarks>If the library is not found, a warning message is displayed to the user and a log
+        /// entry is created. This method should be called before attempting to use CivilPython functionality to ensure
+        /// the required dependency is present.</remarks>
+        /// <returns>true if the CivilPython library is installed; otherwise, false.</returns>
+        internal static bool EnsureCivilPythonInstalled()
+        {
+            string version = Utils.GetCivilPythonVersion();
+
+            string rootFolder = Utils.GetPluginRootFolder(version);
+
+            string dllPath = Path.Combine(
+                rootFolder,
+                $"CivilPython{version}.bundle",
+                "Contents",
+                "win",
+                $"CivilPython{version}.dll");
+
+            if (File.Exists(dllPath))
+                return true;
+
+            var civilPythonDownloadLocation = "https://github.com/atultegar/CivilPython/releases";
+
+            string message = $"CivilPython {version} is not installed.\n\n" +
+                $"Please download it from {civilPythonDownloadLocation}\n\n" +
+                $"(Link copied to your clipboard)";
+
+            Utils.Log(message);
+
+            MessageBox.Show(
+                message,
+                "CivilPython not installed",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Warning);
+
+            Clipboard.SetText(civilPythonDownloadLocation);
+
+            return false;
+        }
+
+
+        internal static string GetCivilPythonVersion()
+        {
+#if C2023
+            return "2023";
+
+#elif C2024
+            return "2024";
+
+#elif C2025
+            return "2025";
+
+#elif C2026
+            return "2026";
+
+
+#elif C2027
+            return "2027";
+
+#else
+            throw new NotSupportedException("Unsupported Civil 3D version.");
+#endif
+        }
+
+        internal static string GetPluginRootFolder(string version)
+        {
+            int versionInt = int.Parse(version);
+
+            return versionInt >= 2026
+                ? Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    "Autodesk",
+                    "ApplicationPlugins")
+                : Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+                    "Autodesk",
+                    "ApplicationPlugins");
+        }
+
 
         // TODO : Create a set of nodes to process directly LandXML files to extract:
         // Surfaces
@@ -2991,6 +3090,6 @@ namespace CivilConnection
         // Corridors
         // Pipe Networks
 
-        #endregion
+#endregion
     }
 }

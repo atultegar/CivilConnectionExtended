@@ -252,6 +252,12 @@ namespace CivilConnection
 
             if (!this._corridor._corridorFeaturelinesXMLExported)
             {
+                // Check for installation of CivilPython
+                if (!Utils.EnsureCivilPythonInstalled())
+                {
+                    return null;
+                }
+
                 this._baseline.Alignment.Document.SendCommand(string.Format("-ExportCorridorFeatureLinesToXml\n{0}\n", this._baseline.Corridor.Handle));
 
                 DateTime start = DateTime.Now;
