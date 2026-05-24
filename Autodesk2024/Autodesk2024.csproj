@@ -4,7 +4,7 @@
 	<RootNamespace>CivilConnection</RootNamespace>
     <TargetFramework>net48</TargetFramework>
 	  <EnableDynamicLoading>true</EnableDynamicLoading>
-    <Configurations>Debug;Release;2024;2025;2023;2026;2027</Configurations>
+    <Configurations>Debug;Release;2024;2025;2023;2026;2027;2027</Configurations>
     <AssemblyVersion>7.3.0.0</AssemblyVersion>
     <FileVersion>7.3.0.0</FileVersion>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
@@ -43,6 +43,15 @@
 	  <UseWindowsForms>true</UseWindowsForms>
 	  <AssemblyName>Autodesk2026</AssemblyName>
 	  <WarningLevel>4</WarningLevel>
+	</PropertyGroup>		
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='2027|AnyCPU'">
+	  <DefineConstants>C2026</DefineConstants>
+	  <OutputPath>bin\2026\</OutputPath>
+	  <DocumentationFile>bin\2026\Autodesk2026.xml</DocumentationFile>
+	  <TargetFramework>net8.0-windows</TargetFramework>
+	  <UseWindowsForms>true</UseWindowsForms>
+	  <AssemblyName>Autodesk2026</AssemblyName>
+	  <WarningLevel>4</WarningLevel>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='2027|AnyCPU'">
 		<DefineConstants>C2027</DefineConstants>
@@ -72,6 +81,7 @@
 		<C3DVersion Condition="'$(Configuration)|$(Platform)'=='2024|AnyCPU'">2024</C3DVersion>
 		<C3DVersion Condition="'$(Configuration)|$(Platform)'=='2025|AnyCPU'">2025</C3DVersion>
 		<C3DVersion Condition="'$(Configuration)|$(Platform)'=='2026|AnyCPU'">2026</C3DVersion>
+		<C3DVersion Condition="'$(Configuration)|$(Platform)'=='2027|AnyCPU'">2026</C3DVersion>
 		<C3DVersion Condition="'$(Configuration)|$(Platform)'=='2027|AnyCPU'">2027</C3DVersion>
 	</PropertyGroup>
 	<PropertyGroup>
@@ -79,6 +89,7 @@
 		<DynCoreVersion Condition="'$(Configuration)|$(Platform)'=='2024|AnyCPU'">2.19</DynCoreVersion>
 		<DynCoreVersion Condition="'$(Configuration)|$(Platform)'=='2025|AnyCPU'">3.0</DynCoreVersion>
 		<DynCoreVersion Condition="'$(Configuration)|$(Platform)'=='2026|AnyCPU'">3.4</DynCoreVersion>
+		<DynCoreVersion Condition="'$(Configuration)|$(Platform)'=='2027|AnyCPU'">3.4</DynCoreVersion>
 		<DynCoreVersion Condition="'$(Configuration)|$(Platform)'=='2027|AnyCPU'">4.0</DynCoreVersion>
 	</PropertyGroup>
 	<PropertyGroup>
@@ -86,6 +97,7 @@
 		<DynRevitVersion Condition="'$(Configuration)|$(Platform)'=='2024|AnyCPU'">2.19</DynRevitVersion>
 		<DynRevitVersion Condition="'$(Configuration)|$(Platform)'=='2025|AnyCPU'">3.0</DynRevitVersion>
 		<DynRevitVersion Condition="'$(Configuration)|$(Platform)'=='2026|AnyCPU'">3.4</DynRevitVersion>
+		<DynRevitVersion Condition="'$(Configuration)|$(Platform)'=='2027|AnyCPU'">3.4</DynRevitVersion>
 		<DynRevitVersion Condition="'$(Configuration)|$(Platform)'=='2027|AnyCPU'">4.0</DynRevitVersion>
 	</PropertyGroup>
 	<PropertyGroup>
@@ -93,6 +105,7 @@
 		<DynRevitPath Condition="'$(Configuration)|$(Platform)'=='2024|AnyCPU'">C:\Program Files\Autodesk\Revit 2024</DynRevitPath>
 		<DynRevitPath Condition="'$(Configuration)|$(Platform)'=='2025|AnyCPU'">C:\Program Files\Autodesk\Revit 2025</DynRevitPath>
 		<DynRevitPath Condition="'$(Configuration)|$(Platform)'=='2026|AnyCPU'">C:\Program Files\Autodesk\Revit 2026</DynRevitPath>
+		<DynRevitPath Condition="'$(Configuration)|$(Platform)'=='2027|AnyCPU'">C:\Program Files\Autodesk\Revit 2026</DynRevitPath>
 		<DynRevitPath Condition="'$(Configuration)|$(Platform)'=='2027|AnyCPU'">C:\Program Files\Autodesk\Revit 2027</DynRevitPath>
 	</PropertyGroup>
 	<ItemGroup>
@@ -117,13 +130,13 @@
 		
 		<Reference Include="Autodesk.AEC.Interop.Base">
 			<HintPath>C:\Program Files\Autodesk\AutoCAD $(C3DVersion)\ACA\Autodesk.AEC.Interop.Base.dll</HintPath>
-			<EmbedInteropTypes>True</EmbedInteropTypes>
+			<EmbedInteropTypes>False</EmbedInteropTypes>
 			<Private>False</Private>
 			<SpecificVersion>False</SpecificVersion>
 		</Reference>
 		<Reference Include="Autodesk.AEC.Interop.UIBase">
 			<HintPath>C:\Program Files\Autodesk\AutoCAD $(C3DVersion)\ACA\Autodesk.AEC.Interop.UIBase.dll</HintPath>
-			<EmbedInteropTypes>True</EmbedInteropTypes>
+			<EmbedInteropTypes>False</EmbedInteropTypes>
 			<Private>False</Private>
 			<SpecificVersion>False</SpecificVersion>
 		</Reference>		
@@ -135,31 +148,31 @@
 		</Reference>
 		<Reference Include="Autodesk.AECC.Interop.Land">
 			<HintPath>C:\Program Files\Autodesk\AutoCAD $(C3DVersion)\C3D\Autodesk.AECC.Interop.Land.dll</HintPath>
-			<EmbedInteropTypes>True</EmbedInteropTypes>
+			<EmbedInteropTypes>False</EmbedInteropTypes>
 			<Private>False</Private>
 			<SpecificVersion>False</SpecificVersion>
 		</Reference>		
 		<Reference Include="Autodesk.AECC.Interop.UiLand">
 			<HintPath>C:\Program Files\Autodesk\AutoCAD $(C3DVersion)\C3D\Autodesk.AECC.Interop.UiLand.dll</HintPath>
-			<EmbedInteropTypes>True</EmbedInteropTypes>
+			<EmbedInteropTypes>False</EmbedInteropTypes>
 			<Private>False</Private>
 			<SpecificVersion>False</SpecificVersion>
 		</Reference>
 		<Reference Include="Autodesk.AECC.Interop.UiRoadway">
 			<HintPath>C:\Program Files\Autodesk\AutoCAD $(C3DVersion)\C3D\Autodesk.AECC.Interop.UiRoadway.dll</HintPath>
-			<EmbedInteropTypes>True</EmbedInteropTypes>
+			<EmbedInteropTypes>False</EmbedInteropTypes>
 			<Private>False</Private>
 			<SpecificVersion>False</SpecificVersion>
 		</Reference>
 		<Reference Include="Autodesk.AutoCAD.Interop">
 			<HintPath>C:\Program Files\Autodesk\AutoCAD $(C3DVersion)\Autodesk.AutoCAD.Interop.dll</HintPath>
-			<EmbedInteropTypes>True</EmbedInteropTypes>
+			<EmbedInteropTypes>False</EmbedInteropTypes>
 			<Private>False</Private>
 			<SpecificVersion>False</SpecificVersion>
 		</Reference>
 		<Reference Include="Autodesk.AutoCAD.Interop.Common">
 			<HintPath>C:\Program Files\Autodesk\AutoCAD $(C3DVersion)\Autodesk.AutoCAD.Interop.Common.dll</HintPath>
-			<EmbedInteropTypes>True</EmbedInteropTypes>
+			<EmbedInteropTypes>False</EmbedInteropTypes>
 			<Private>False</Private>
 			<SpecificVersion>False</SpecificVersion>
 		</Reference>

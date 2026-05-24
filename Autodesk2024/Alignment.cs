@@ -183,7 +183,7 @@ namespace CivilConnection
         /// </returns>
         public static Alignment ByPolygonal(CivilDocument civilDocument, string name, PolyCurve polyCurve, string layer)
         {
-            var pl = civilDocument._document.HandleToObject(Utils.AddLWPolylineByPolyCurve(civilDocument._document, polyCurve, "0"));
+            dynamic pl = civilDocument._document.HandleToObject(Utils.AddLWPolylineByPolyCurve(civilDocument._document, polyCurve, "0"));
 
             Utils.Log(string.Format("Polyline 2D added: {0}", pl.Handle));
 
