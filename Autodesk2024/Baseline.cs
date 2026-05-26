@@ -31,6 +31,7 @@ using Autodesk.DesignScript.Runtime;
 using Autodesk.DesignScript.Geometry;
 using System.Xml;
 using System.IO;
+using Autodesk.AECC.Interop.UiLand;
 
 namespace CivilConnection
 {
@@ -258,7 +259,9 @@ namespace CivilConnection
                     return null;
                 }
 
-                this._baseline.Alignment.Document.SendCommand(string.Format("-ExportCorridorFeatureLinesToXml\n{0}\n", this._baseline.Corridor.Handle));
+                var doc = this._baseline.Alignment.Document as AeccDocument;
+
+                doc.SendCommand(string.Format("-ExportCorridorFeatureLinesToXml\n{0}\n", this._baseline.Corridor.Handle));
 
                 DateTime start = DateTime.Now;
 
@@ -618,7 +621,7 @@ namespace CivilConnection
 
             Point p = null;
 
-            var Xyz = this._baseline.StationOffsetElevationToXYZ(new double[] { station, offset, elevation });
+            dynamic Xyz = this._baseline.StationOffsetElevationToXYZ(new double[] { station, offset, elevation });
             p = Point.ByCoordinates(Xyz[0], Xyz[1], Xyz[2]);
 
             Utils.Log(string.Format("Baseline.PointByStationOffsetElevation completed.", ""));
@@ -640,7 +643,7 @@ namespace CivilConnection
 
             if (station >= this.Start && station <= this.End)
             {
-                var Xyz = this._baseline.GetDirectionAtStation(station);
+                dynamic Xyz = this._baseline.GetDirectionAtStation(station);
                 Vector y = Vector.ByCoordinates(Xyz[0], Xyz[1], Xyz[2]);
                 Vector x = y.Cross(Vector.ZAxis());
                 Point origin = this.PointByStationOffsetElevation(station, 0, 0);
@@ -842,7 +845,7 @@ namespace CivilConnection
                                 || Math.Abs(Math.Round(pt.Station, 5) - reg.StartStation) < 0.001
                                 || Math.Abs(Math.Round(pt.Station, 5) - reg.EndStation) < 0.001)
                             {
-                                var p = pt.XYZ;
+                                dynamic p = pt.XYZ;
 
                                 try
                                 {
@@ -938,7 +941,7 @@ namespace CivilConnection
 
                     foreach (var pt in fl.FeatureLinePoints.Cast<AeccFeatureLinePoint>())
                     {
-                        var p = pt.XYZ;
+                        dynamic p = pt.XYZ;
 
                         try
                         {

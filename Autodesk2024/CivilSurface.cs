@@ -123,7 +123,7 @@ namespace CivilConnection
 
                 endPoint = line.EndPoint;
 
-                double[] surfacePoints = this._surface.SampleElevations(startPoint.X, startPoint.Y, endPoint.X, endPoint.Y);
+                double[] surfacePoints = (double[])this._surface.SampleElevations(startPoint.X, startPoint.Y, endPoint.X, endPoint.Y);
 
                 for (int i = 0; i < surfacePoints.Length; i += 3)
                 {
@@ -174,7 +174,7 @@ namespace CivilConnection
 
                 endPoint = line.EndPoint;
 
-                double[] surfacePoints = this._surface.SampleElevations(startPoint.X, startPoint.Y, endPoint.X, endPoint.Y);
+                double[] surfacePoints = (double[])this._surface.SampleElevations(startPoint.X, startPoint.Y, endPoint.X, endPoint.Y);
 
                 for (int i = 0; i < surfacePoints.Length; i += 3)
                 {
@@ -212,7 +212,7 @@ namespace CivilConnection
 
             List<Point> pointList = new List<Point>();
 
-            double[] points = this._surface.Points;
+            double[] points = (double[])this._surface.Points;
 
             for (int i = 0; i < points.Length; i += 3)
             {
@@ -497,7 +497,7 @@ namespace CivilConnection
 
             try
             {
-                var intPoint = this._surface.IntersectPointWithSurface(p1, direction);
+                dynamic intPoint = this._surface.IntersectPointWithSurface(p1, direction);
 
                 double p2X = intPoint[0];
                 double p2Y = intPoint[1];

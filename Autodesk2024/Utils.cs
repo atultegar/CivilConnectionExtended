@@ -538,7 +538,7 @@ namespace CivilConnection
 
                         IList<Point> group = new List<Point>();
 
-                        foreach (int i in g.Points)
+                        foreach (int i in g.Points as long[])
                         {
                             AeccPoint p = doc.Points.Item(i - 1);
 
@@ -943,7 +943,7 @@ namespace CivilConnection
             {
                 PolyCurve polycurve = curve as PolyCurve;
 
-                Acad3DPolyline pl = doc.HandleToObject(AddPolylineByPoints(doc, new List<Point>() { polycurve.CurveAtIndex(0).StartPoint, polycurve.CurveAtIndex(0).EndPoint }, layer));
+                Acad3DPolyline pl = doc.HandleToObject(AddPolylineByPoints(doc, new List<Point>() { polycurve.CurveAtIndex(0).StartPoint, polycurve.CurveAtIndex(0).EndPoint }, layer)) as Acad3DPolyline;
 
                 if (polycurve.IsClosed)
                 {
@@ -1035,7 +1035,7 @@ namespace CivilConnection
 
             if (pl.Closed)
             {
-                var collection = pl.Explode();
+                dynamic collection = pl.Explode();
 
                 AcadEntity[] obj = new AcadEntity[collection.Length];
 
@@ -1044,8 +1044,8 @@ namespace CivilConnection
                     obj[i] = collection[i] as AcadEntity;
                 }
 
-                var region = ms.AddRegion(obj)[0];
-                region.Layer = layer;
+                dynamic region = ms.AddRegion(obj);
+                region[0].Layer = layer;
 
                 pl.Delete();
 
@@ -1090,7 +1090,7 @@ namespace CivilConnection
 
             Acad3DPolyline pl = doc.HandleToObject(id) as Acad3DPolyline;
 
-            var collection = pl.Explode();
+            dynamic collection = pl.Explode();
 
             AcadEntity[] obj = new AcadEntity[collection.Length];
 
@@ -1099,8 +1099,8 @@ namespace CivilConnection
                 obj[i] = collection[i] as AcadEntity;
             }
 
-            var region = ms.AddRegion(obj)[0];
-            region.Layer = layer;
+            dynamic region = ms.AddRegion(obj);
+            region[0].Layer = layer;
 
             pl.Delete();
 
@@ -1136,7 +1136,7 @@ namespace CivilConnection
 
             AcadModelSpace ms = db.ModelSpace;
 
-            var r = doc.HandleToObject(AddRegionByPatch(doc, curve, layer));
+            dynamic r = doc.HandleToObject(AddRegionByPatch(doc, curve, layer));
             r.Layer = layer;
 
             solid = ms.AddExtrudedSolid(r, height, 0);
@@ -1186,7 +1186,7 @@ namespace CivilConnection
 
             foreach (Acad3DPolyline pl in polylines)
             {
-                var collection = pl.Explode();
+                dynamic collection = pl.Explode();
 
                 AcadEntity[] obj = new AcadEntity[collection.Length];
 
@@ -1195,8 +1195,8 @@ namespace CivilConnection
                     obj[i] = collection[i] as AcadEntity;
                 }
 
-                var region = ms.AddRegion(obj)[0];
-                region.Layer = layer;
+                dynamic region = ms.AddRegion(obj);
+                region[0].Layer = layer;
 
                 pl.Delete();
 
@@ -1249,7 +1249,7 @@ namespace CivilConnection
                 }
             }
 
-            var solid = doc.HandleToObject(AddExtrudedSolidByPatch(doc, closedCurve, height, layer));
+            dynamic solid = doc.HandleToObject(AddExtrudedSolidByPatch(doc, closedCurve, height, layer));
 
             var operation = AcBooleanType.acSubtraction;
 
@@ -1305,7 +1305,7 @@ namespace CivilConnection
                 }
             }
 
-            var solid = doc.HandleToObject(AddExtrudedSolidByCurves(doc, closedCurves, height, layer));
+            dynamic solid = doc.HandleToObject(AddExtrudedSolidByCurves(doc, closedCurves, height, layer));
 
             var operation = AcBooleanType.acSubtraction;
 
@@ -1364,7 +1364,7 @@ namespace CivilConnection
 
             foreach (var handle in handles)
             {
-                var solid = doc.HandleToObject(handle);
+                dynamic solid = doc.HandleToObject(handle);
 
                 foreach (Acad3DSolid cs in cSolids)
                 {
@@ -2574,7 +2574,9 @@ namespace CivilConnection
 
             Utils.Log(xmlPath);
 
-            surface.InternalElement.Document.SendCommand(string.Format("-ExportSurfaceToXML\n{0}\n", surface.InternalElement.Handle));
+            dynamic doc = surface.InternalElement.Document;
+
+            doc.SendCommand(string.Format("-ExportSurfaceToXML\n{0}\n", surface.InternalElement.Handle));
 
             DateTime start = DateTime.Now;
 

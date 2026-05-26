@@ -225,7 +225,7 @@ namespace CivilConnection
 
                                         var soe = cp.GetStationOffsetElevationToBaseline();
 
-                                        var pt = this._baseline._baseline.StationOffsetElevationToXYZ(soe);
+                                        dynamic pt = this._baseline._baseline.StationOffsetElevationToXYZ(soe);
 
                                         Point p = Point.ByCoordinates(pt[0], pt[1], pt[2]);
 
@@ -314,7 +314,9 @@ namespace CivilConnection
                     return null;
                 }
 
-                this._baseline._baseline.Alignment.Document.SendCommand(string.Format("-ExportSubassemblyShapesToXML\n{0}\n{1}\n{2}\n", this._baseline._baseline.Corridor.Handle, this._baseline.Index, this.Index));
+                var doc = this._baseline._baseline.Alignment.Document as AeccRoadwayDocument;
+
+                doc.SendCommand(string.Format("-ExportSubassemblyShapesToXML\n{0}\n{1}\n{2}\n", this._baseline._baseline.Corridor.Handle, this._baseline.Index, this.Index));
 
                 DateTime start = DateTime.Now;
 
@@ -526,7 +528,7 @@ namespace CivilConnection
 
                                 foreach (AeccCalculatedPoint cp in cl.CalculatedPoints)
                                 {
-                                    var pt = this._baseline._baseline.StationOffsetElevationToXYZ(cp.GetStationOffsetElevationToBaseline());
+                                    dynamic pt = this._baseline._baseline.StationOffsetElevationToXYZ(cp.GetStationOffsetElevationToBaseline());
 
                                     Point p = Point.ByCoordinates(pt[0], pt[1], pt[2]);
 
@@ -610,7 +612,9 @@ namespace CivilConnection
                     return null;
                 }
 
-                this._baseline._baseline.Alignment.Document.SendCommand(string.Format("-ExportSubassemblyLinksToXML\n{0}\n{1}\n{2}\n", this._baseline._baseline.Corridor.Handle, this._baseline.Index, this.Index));
+                var doc = this._baseline._baseline.Alignment.Document as AeccRoadwayDocument;
+
+                doc.SendCommand(string.Format("-ExportSubassemblyLinksToXML\n{0}\n{1}\n{2}\n", this._baseline._baseline.Corridor.Handle, this._baseline.Index, this.Index));
 
                 DateTime start = DateTime.Now;
 
