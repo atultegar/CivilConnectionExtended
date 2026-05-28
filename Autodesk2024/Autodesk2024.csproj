@@ -111,6 +111,10 @@
 	<ItemGroup>
 	  <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
 	</ItemGroup>
+	<ItemGroup>
+	  <ProjectReference Include="..\CivilConnection.Contracts\CivilConnection.Contracts.csproj" />
+	  <ProjectReference Include="..\CivilConnection.Interop\CivilConnection.Interop.csproj" />
+	</ItemGroup>
 
 	<ItemGroup>
 		

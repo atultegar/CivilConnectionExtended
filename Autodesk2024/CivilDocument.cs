@@ -1,92 +1,291 @@
-﻿// Copyright (c) 2016 Autodesk, Inc. All rights reserved.
-// Author: paolo.serra@autodesk.com
+﻿// Copyright (c) 2016 Autodesk, Inc.
+// Copyright (c) 2026 Atul Tegar
+//
+// Original Author: paolo.serra@autodesk.com
+// Maintained and extended by: atul.tegar@gmail.com
 // 
 // Licensed under the Apache License, Version 2.0 (the "License").
 // You may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
+//
 //    http://www.apache.org/licenses/LICENSE-2.0
 // 
-//  Unless required by applicable law or agreed to in writing, software
+// Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
-// implied.  See the License for the specific language governing
-// permissions and limitations under the License.
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+using Autodesk.AECC.Interop.Land;
+using Autodesk.AECC.Interop.Roadway;
+using Autodesk.AutoCAD.Interop.Common;
+using Autodesk.DesignScript.Geometry;
+using Autodesk.DesignScript.Runtime;
+using CivilConnection.Contracts.Models;
+using CivilConnection.Interop.Context;
+using CivilConnection.Interop.Services;
+using Revit.Elements;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-using System.Runtime;
-using System.Runtime.InteropServices;
-
-using Autodesk.AutoCAD.Interop;
-using Autodesk.AutoCAD.Interop.Common;
-using Autodesk.AECC.Interop.UiRoadway;
-using Autodesk.AECC.Interop.Roadway;
-using Autodesk.AECC.Interop.UiLand;
-using Autodesk.AECC.Interop.Land;
-using System.Reflection;
-
-using Autodesk.DesignScript.Runtime;
-
-using Autodesk.DesignScript.Geometry;
-
-using System.Xml;
 using System.Globalization;
-using Revit.Elements;
-using Microsoft.SqlServer.Server;
-using System.IO;
+using System.Linq;
+using System.Xml;
 
 namespace CivilConnection
 {
     /// <summary>
-    /// The CivilDocument class
+    /// Represents a Civil 3D document inside Dynamo.
     /// </summary>
     public class CivilDocument
     {
-        #region PRIVATE PROPERTIES
+        #region INTERNAL FIELDS
+
+        internal readonly CivilContext _context;
+
+        internal readonly dynamic _document;
+
+        internal readonly CivilDocumentData _data;
+
+        #endregion
+
+        #region SERVICES
+
+        private readonly AlignmentService _alignmentService;
+
+        private readonly CorridorService _corridorService;
+
+        private readonly SurfaceService _surfaceService;
+
+        private readonly CommandService _commandService;
+
+        private readonly GeometryService _geometryService;
+
+        #endregion
+
+        #region CONSTRUCTORS
+
         /// <summary>
-        /// The document
+        /// Initializes a new instance of the CivilDocument class with the specified context, document, and data.
         /// </summary>
-        internal AeccRoadwayDocument _document;
+        /// <param name="context">The CivilContext that provides access to civil-specific services and settings for the document.</param>
+        /// <param name="document">The underlying dynamic document object to be associated with this CivilDocument instance.</param>
+        /// <param name="data">The CivilDocumentData containing metadata and configuration for the document.</param>
+        internal CivilDocument(CivilContext context, dynamic document)
+        {
+            _context = context;
+
+            _document = document;
+
+            _alignmentService = new AlignmentService();
+
+            _corridorService = new CorridorService();
+
+            _surfaceService = new SurfaceService();
+
+            _commandService = new CommandService();
+
+            _geometryService = new GeometryService();
+        }
+
+        #endregion
+
+        #region PUBLIC PROPERTIES
+
         /// <summary>
         /// The document name.
         /// </summary>
-        public string Name { get { return _document.Name; } }
-        /// <summary>
-        /// The corridors
-        /// </summary>
-        private AeccCorridors _corridors;
-        /// <summary>
-        /// The alignments
-        /// </summary>
-        private AeccAlignmentsSiteless _alignments;
-        /// <summary>
-        /// The Surfaces
-        /// </summary>
-        private AeccSurfaces _surfaces;
+        public string Name => _document.Name;
+
         /// <summary>
         /// Gets the internal element.
         /// </summary>
         /// <value>
         /// The internal element.
         /// </value>
-        internal object InternalElement { get { return this._document; } }
+        internal object InternalElement => _document;
+
+        /// <summary>
+        /// The corridors
+        /// </summary>
+        private AeccCorridors _corridors;
+
+        /// <summary>
+        /// The alignments
+        /// </summary>
+        private AeccAlignmentsSiteless _alignments;
+
+        /// <summary>
+        /// The Surfaces
+        /// </summary>
+        private AeccSurfaces _surfaces;
+
         #endregion
 
-        #region CONSTRUCTORS
+
+        #region ALIGNMENTS
+
         /// <summary>
-        /// Initializes a new instance of the <see cref="CivilDocument"/> class.
+        /// Gets all alignments.
         /// </summary>
-        /// <param name="_doc">The document.</param>
-        internal CivilDocument(AeccRoadwayDocument _doc)
+        /// <returns></returns>
+        public IList<Alignment> GetAlignments()
         {
-            this._document = _doc;
-            _corridors = _doc.Corridors;
-            _alignments = _doc.AlignmentsSiteless;
-            _surfaces = _doc.Surfaces;
+            Utils.Log("CivilDocument.GetAlignments started...");
+
+            var output = _alignmentService
+                .GetAlignments(_document)
+                .Select(x => new Alignment(_context, x))
+                .ToList();
+
+            Utils.Log("CivilDocument.GetAlignments completed.");
+
+            return output;
         }
+
+        /// <summary>
+        /// Gets alignment by name.
+        /// </summary>
+        /// <param name="name">The alignment name.</param>
+        /// <returns></returns>
+        public Alignment GetAlignmentByName(string name)
+        {
+            return GetAlignments().FirstOrDefault(x => x.Name == name);
+        }
+
+        #endregion
+
+        #region CORRIDORS
+
+        /// <summary>
+        /// Gets the corridors.
+        /// </summary>
+        /// <returns></returns>
+        public IList<Corridor> GetCorridors()
+        {
+            Utils.Log("CivilDocument.GetCorridors started...");
+
+            var output = _corridorService
+                .GetCorridors(_document)
+                .Select(x => new Corridor(_context, x))
+                .ToList();
+
+            Utils.Log("CivilDocument.GetCorridors completed.");
+
+            return output;
+        }
+
+        /// <summary>
+        /// Get the corridor by name.
+        /// </summary>
+        /// <param name="name">The corridor name.</param>
+        /// <returns></returns>
+        public Corridor GetCorridorByName(string name)
+        {
+            return GetCorridors().FirstOrDefault(x => x.Name == name);
+        }
+
+        #endregion
+
+        #region SURFACES
+
+        /// <summary>
+        /// Gets all surfaces in the document
+        /// </summary>
+        /// <returns>
+        /// List of surfaces
+        /// </returns>
+        public IList<CivilSurface> GetSurfaces()
+        {
+            Utils.Log("CivilDocument.GetSurfaces started...");
+
+            var output = _surfaceService
+                .GetSurfaces(_document)
+                .Select(x => new CivilSurface(_context, x))
+                .ToList();
+
+            Utils.Log("CivilDocument.GetSurfaces completed.");
+
+            return output;
+        }
+
+        /// <summary>
+        /// Gets surface by name.
+        /// </summary>
+        /// <param name="name">The name of the surface</param>
+        /// <returns>
+        /// Civil Surface
+        /// </returns>
+        public CivilSurface GetSurfaceByName(string name)
+        {
+            return GetSurfaces().FirstOrDefault(x => x.Name == name);
+        }
+
+        #endregion
+
+        #region COMMANDS
+
+        /// <summary>
+        /// Send Command to the Civil Document.
+        /// </summary>
+        /// <param name="command">The command.</param>
+        /// <returns></returns>
+        public bool SendCommand(string command)
+        {
+            Utils.Log("CivilDocument.SendCommand started...");
+
+            try
+            {
+                _commandService.SendCommand(_document, command);
+
+                Utils.Log("CivilDocument.SendCommand completed.");
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Utils.Log($"ERROR: {ex.Message}");
+
+                return false;
+            }
+        }
+
+        #endregion
+
+        #region AUTOCAD GEOMETRY
+
+        /// <summary>
+        /// Adds a new layer to the Civil Document by name.
+        /// </summary>
+        /// <param name="name">The name.</param>
+        /// <returns></returns>
+        public string AddLayer(string name)
+        {
+            Utils.AddLayer(this._document, name);
+            return name;
+        }
+
+        /// <summary>
+        /// Adds the DB Point.
+        /// </summary>
+        /// <param name="point">The coordinates of the point to add to the database.</param>
+        /// <param name="layer">The name of the layer on which to add the point. Defaults to "0" if not specified.</param>
+        /// <returns>The identifier of the newly added point entity.</returns>
+        public string AddDBPoint(Point point, string layer = "0")
+        {
+            return Utils.AddDBPointByPoint(this._document, point, layer);
+        }
+
+        /// <summary>
+        /// Adds the DB Points.
+        /// </summary>
+        /// <param name="points"></param>
+        /// <param name="layer"></param>
+        /// <returns>Object Handles</returns>
+        public List<string> AddDBPoints(List<Point> points, List<string> layers)
+        {
+            return Utils.AddDBPointsByPoints(this._document, points, layers);
+        }
+
         #endregion
 
         #region PRIVATE METHODS
@@ -122,7 +321,7 @@ namespace CivilConnection
 
             this.SendCommand("-ExportLandFeatureLinesToXml\n");
 
-            DateTime start = DateTime.Now;
+            System.DateTime start = System.DateTime.Now;
 
 
             while (true)
@@ -201,107 +400,11 @@ namespace CivilConnection
         #endregion
 
         #region PUBLIC METHODS
-        /// <summary>
-        /// Gets the corridors.
-        /// </summary>
-        /// <returns></returns>
-        public IList<Corridor> GetCorridors()
-        {
-            Utils.Log(string.Format("CivilDocument.GetCorridors started...", ""));
+        
 
-            IList<Corridor> output = new List<Corridor>();
+        
 
-            foreach (AeccCorridor corridor in this._document.Corridors)
-            {
-                output.Add(new Corridor(corridor, this._document));
-            }
-
-            Utils.Log(string.Format("CivilDocument.GetCorridors completed.", ""));
-
-            return output;
-        }
-
-        /// <summary>
-        /// Get the corridor by name.
-        /// </summary>
-        /// <param name="name">The corridor name.</param>
-        /// <returns></returns>
-        public Corridor GetCorridorByName(string name)
-        {
-            return this.GetCorridors().First(x => x.Name == name);
-        }
-
-        /// <summary>
-        /// Gets the alignments.
-        /// </summary>
-        /// <returns></returns>
-        public IList<Alignment> GetAlignments()
-        {
-            Utils.Log(string.Format("CivilDocument.GetAlignments started...", ""));
-
-            IList<Alignment> output = new List<Alignment>();
-
-            foreach (AeccAlignment a in this._alignments)
-            {
-                output.Add(new Alignment(a));
-            }
-
-            foreach (AeccSite site in this._document.Sites)
-            {
-                foreach (AeccAlignment a in site.Alignments)
-                {
-                    output.Add(new Alignment(a));
-                }
-            }
-
-            Utils.Log(string.Format("CivilDocument.GetAlignments completed.", ""));
-
-            return output;
-        }
-
-        /// <summary>
-        /// Gets alignment by name.
-        /// </summary>
-        /// <param name="name">The alignment name.</param>
-        /// <returns></returns>
-        public Alignment GetAlignmentByName(string name)
-        {
-            return this.GetAlignments().First(x => x.Name == name);
-        }
-
-        /// <summary>
-        /// Gets all surfaces in the document
-        /// </summary>
-        /// <returns>
-        /// List of surfaces
-        /// </returns>
-        public IList<CivilSurface> GetSurfaces()
-        {
-            Utils.Log(string.Format("CivilDocument.GetSurfaces started...", ""));
-
-            IList<CivilSurface> output = new List<CivilSurface>();
-
-            foreach (AeccSurface s in this._surfaces)
-            {
-                output.Add(new CivilSurface(s));
-            }
-
-            Utils.Log(string.Format("CivilDocument.GetSurfaces completed.", ""));
-
-            return output;
-        }
-
-        /// <summary>
-        /// Gets surface by name.
-        /// </summary>
-        /// <param name="name">The name of the surface</param>
-        /// <returns>
-        /// Civil Surface
-        /// </returns>
-        public CivilSurface GetSurfaceByName(string name)
-        {
-            return this.GetSurfaces().First(x => x.Name == name);
-        }
+        
 
         #region AUTOCAD METHODS
         /// <summary>
@@ -406,16 +509,7 @@ namespace CivilConnection
             return Utils.AddExtrudedSolidByCurves(this._document, curves, height, layer);
         }
 
-        /// <summary>
-        /// Adds a new layer to the Civil Document by name.
-        /// </summary>
-        /// <param name="name">The name.</param>
-        /// <returns></returns>
-        public string AddLayer(string name)
-        {
-            Utils.AddLayer(this._document, name);
-            return name;
-        }
+        
 
         /// <summary>
         /// Creates a text in the CivilDocument and rotates it to match the plane.
@@ -489,36 +583,7 @@ namespace CivilConnection
             return Utils.ImportElement(this._document, element, parameter, layer);
         }
 
-        /// <summary>
-        /// Send Command to the Civil Document.
-        /// </summary>
-        /// <param name="command">The command.</param>
-        /// <returns></returns>
-        public bool SendCommand(string command)
-        {
-            Utils.Log(string.Format("CivilDocument.SendCommand started...", ""));
-
-            bool output = true;
-
-            try
-            {
-                AcadDocument doc = this.InternalElement as AcadDocument;
-
-                doc.SendCommand(command);
-            }
-            catch (Exception ex)
-            {
-                output = false;
-
-                Utils.Log(string.Format("ERROR: {0}", ex.Message));
-
-                throw ex;
-            }
-
-            Utils.Log(string.Format("CivilDocument.SendCommand completed.", ""));
-
-            return output;
-        }
+        
 
         /// <summary>
         /// Slices the solids in Civil 3D using a Dynamo Plane.
@@ -544,26 +609,9 @@ namespace CivilConnection
             return Utils.AddCivilPointByPoint(this._document, point);
         }
 
-        /// <summary>
-        /// Adds the DB Point.
-        /// </summary>
-        /// <param name="point"></param>
-        /// <returns>Object Handle</returns>
-        public string AddDBPoint(Point point, string layer)
-        {
-            return Utils.AddDBPointByPoint(this._document, point, layer);
-        }
+        
 
-        /// <summary>
-        /// Adds the DB Points.
-        /// </summary>
-        /// <param name="points"></param>
-        /// <param name="layer"></param>
-        /// <returns>Object Handles</returns>
-        public List<string> AddDBPointsByPoints(List<Point> points, List<string> layers)
-        {
-            return Utils.AddDBPointsByPoints(this._document, points, layers);
-        }
+        
 
         /// <summary>
         /// Adds the civil point group.
