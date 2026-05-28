@@ -21,10 +21,11 @@ namespace CivilConnection.Interop.Runtime
         {
             try
             {
-                var type = Type.GetTypeFromProgID(progId);
-                var guid = type.GUID;
+                Guid clsid;
 
-                GetActiveObjectExt(ref guid, IntPtr.Zero, out object obj);
+                CLSIDFromProgIDEx(progId, out clsid);
+
+                GetActiveObjectExt(ref clsid, IntPtr.Zero, out object obj);
 
                 return obj;
             }

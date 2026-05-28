@@ -46,7 +46,7 @@ namespace CivilConnection.Interop.Repositories
             new CivilVersionInfo
             {
                 Version = "2027",
-                AutoCADVersion = "25.2",
+                AutoCADVersion = "26",
                 CivilVersion = "13.9",
                 ProgId = "AeccXUiRoadway.AeccRoadwayApplication.13.9"
             }

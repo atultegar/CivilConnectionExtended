@@ -13,21 +13,21 @@ namespace CivilConnection.Test.Tests
 
             var service = new DocumentService();
 
-            var documents = service.GetAllDocuments();
+            //var documents = service.GetAllDocuments();
 
-            Console.WriteLine($"Documents found: {documents.Count}");
+            //Console.WriteLine($"Documents found: {documents.Count}");
 
-            foreach (var document in documents)
-            {
-                Console.WriteLine($"{document.Name} | {document.C3DVersion}");
-            }
+            //foreach (var document in documents)
+            //{
+            //    Console.WriteLine($"{document.Name} | {document.Version}");
+            //}
 
-            string version = "2023";
+            string version = "2027";
 
             var activeDoc = service.ActiveDocument(version);
 
             Console.WriteLine($"ActiveDocument in Version: {version}");
-            Console.WriteLine($"{activeDoc.Name} | {activeDoc.C3DVersion}");
+            Console.WriteLine($"{activeDoc.Name} | {activeDoc.Version}");
         }
     }
 }
