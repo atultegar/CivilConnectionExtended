@@ -66,6 +66,8 @@ namespace CivilConnection
         [DllImport("ole32.dll")]
         public static extern int GetActiveObjectExt(ref Guid rclsid, IntPtr reserved, [MarshalAs(UnmanagedType.Interface)] out object ppunk);
 
+        [DllImport("ole32.dll")]
+        private static extern int CLSIDFromProgIDEx([MarshalAs(UnmanagedType.LPWStr)] string progId, out Guid clsid);
         /// <summary>
         /// Gets the application
         /// </summary>
@@ -74,28 +76,33 @@ namespace CivilConnection
         internal AeccRoadwayApplication GetApplication()
         {
             Utils.Log($"GetApplication started...");
-            string m_sAcadProdID = "AutoCAD.Application";
+            
 
             string[] progids = null;
 
 #if C2023
+            string m_sAcadProdID = "AutoCAD.Application";
             progids = new string[] {"AeccXUiRoadway.AeccRoadwayApplication.13.5"}; // 2023
 #elif C2024
+            string m_sAcadProdID = "AutoCAD.Application";
             progids = new string[] { "AeccXUiRoadway.AeccRoadwayApplication.13.6" }; // 2024
 #elif C2025
+            string m_sAcadProdID = "AutoCAD.Application";
             progids = new string[] { "AeccXUiRoadway.AeccRoadwayApplication.13.7" }; // 2025
 #elif C2026
+            string m_sAcadProdID = "AutoCAD.Application";
             progids = new string[] { "AeccXUiRoadway.AeccRoadwayApplication.13.8" }; // 2026
 #elif C2027
+            string m_sAcadProdID = "AutoCAD.Application.26";
             progids = new string[] { "AeccXUiRoadway.AeccRoadwayApplication.13.9" }; // 2027
 #endif
             AcadApplication m_oAcadApp = null;
             try
             {
                 object obj = null;
-                var type = Type.GetTypeFromProgID(m_sAcadProdID);
-                var guid = type.GUID;
-                int result = GetActiveObjectExt(ref guid, IntPtr.Zero, out obj);
+                Guid clsid;
+                CLSIDFromProgIDEx(m_sAcadProdID, out clsid);
+                int result = GetActiveObjectExt(ref clsid, IntPtr.Zero, out obj);
 
                 if (obj != null)
                 {
