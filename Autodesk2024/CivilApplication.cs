@@ -16,10 +16,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-using Autodesk.AECC.Interop.Land;
-using Autodesk.AECC.Interop.UiRoadway;
+
 using Autodesk.DesignScript.Runtime;
 using Autodesk.Revit.DB;
+using CivilConnection.Contracts.Models;
 using CivilConnection.Interop.Context;
 using CivilConnection.Interop.Services;
 using System;
@@ -163,14 +163,14 @@ namespace CivilConnection
             var docs = _documentService.GetDocuments(_context);
 
             Documents = docs
-                .Select(x => new CivilDocument(_context, x))
+                .Select(x => new CivilDocument(x))
                 .ToList();
 
             var activeDoc = _documentService.GetActiveDocument(_context);
 
             if (activeDoc != null)
             {
-                ActiveDocument = new CivilDocument(_context, activeDoc);
+                ActiveDocument = new CivilDocument(activeDoc);
             }
         }
 
@@ -286,43 +286,37 @@ namespace CivilConnection
 
             var firstDoc = Documents.First();
 
-            if (firstDoc._document == null)
-                return;
+            var settings = _documentService.GetUnitSettings(firstDoc._document);
 
+            ApplyRevitUnits(revitDoc, settings);
+            
+        }
+
+        private static void ApplyRevitUnits(Document revitDoc, UnitSettings settings)
+        {
             Units units = revitDoc.GetUnits();
 
-            var drawingUnits = firstDoc._document.Settings.DrawingSettings.UnitZoneSettings.DrawingUnits;
-
-            var distPrecision = firstDoc._document.Settings.DrawingSettings.AmbientSettings.DistanceSettings.Precision.Value;
-
-            double accuracy = Math.Pow(10, -distPrecision);
-
-            Utils.Log("CivilApplication.SetUnits started...");
-
-            var unitTypeMapping = new Dictionary<AeccDrawingUnitType, ForgeTypeId>
+            var map = new Dictionary<DrawingUnitType, ForgeTypeId>
             {
-                {AeccDrawingUnitType.aeccDrawingUnitMeters, UnitTypeId.Meters },
-                {AeccDrawingUnitType.aeccDrawingUnitDecimeters, UnitTypeId.Decimeters },
-                {AeccDrawingUnitType.aeccDrawingUnitCentimeters, UnitTypeId.Centimeters },
-                {AeccDrawingUnitType.aeccDrawingUnitMillimeters, UnitTypeId.Millimeters },
-                {AeccDrawingUnitType.aeccDrawingUnitFeet, UnitTypeId.Feet },
-                {AeccDrawingUnitType.aeccDrawingUnitInches, UnitTypeId.Inches }
+                { DrawingUnitType.Feet, UnitTypeId.Feet },
+                { DrawingUnitType.Meters, UnitTypeId.Meters },
+                { DrawingUnitType.Millimeters, UnitTypeId.Millimeters },
+                { DrawingUnitType.Centimeters, UnitTypeId.Centimeters },
+                { DrawingUnitType.Decimeters, UnitTypeId.Decimeters },
+                { DrawingUnitType.Inches, UnitTypeId.Inches }
             };
 
-            ForgeTypeId unitTypeId;
-
-            if (unitTypeMapping.TryGetValue(drawingUnits, out unitTypeId))
+            if (!map.TryGetValue(settings.DrawingUnit, out var unitTypeId))
             {
-                Utils.Log($"Civil Document Units: {unitTypeId.ToString()}");
-
-                var formatOptions = new FormatOptions(unitTypeId) { Accuracy = accuracy };
-
-                units.SetFormatOptions(SpecTypeId.Length, formatOptions);
+                throw new Exception("The Civil 3D units are not supported in Revit.");
             }
-            else
+
+            var formatOptions = new FormatOptions(unitTypeId)
             {
-                throw new Exception("UNITS ERROR\nThe Civil 3D units of the Active Document are not supported in Revit.\nChange the Civil 3D Units to continue");
-            }
+                Accuracy = settings.Accuracy
+            };
+
+            units.SetFormatOptions(SpecTypeId.Length, formatOptions);
 
             revitDoc.SetUnits(units);
         }

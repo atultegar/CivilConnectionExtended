@@ -13,14 +13,11 @@
 // permissions and limitations under the License.
 using Autodesk.DesignScript.Runtime;
 using Autodesk.Revit.DB;
-using Autodesk.Revit.DB.Mechanical;
 
 using Revit.GeometryConversion;
 
 using RevitServices.Persistence;
 using RevitServices.Transactions;
-using Revit.Elements;
-using System.Collections.Generic;
 
 
 namespace CivilConnection.MEP

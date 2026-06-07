@@ -1,4 +1,6 @@
-﻿using CivilConnection.Test.Tests;
+﻿using CivilConnection.Interop.Context;
+using CivilConnection.Interop.Wrappers;
+using CivilConnection.Test.Tests;
 using CivilConnection.Test.Utilities;
 using System;
 
@@ -14,9 +16,21 @@ namespace CivilConnection.Test
             {
                 TestConsole.Header("CivilConnection Test Runner");
 
-                DocumentTests.Run();
+                var version = "2026";
 
-                //AlignmentTests.Run();
+                var context = CivilContext.Create(version);
+
+                DocumentTests.Run(context);
+
+                //dynamic document = context.Host.Application.ActiveDocument;
+
+                var document = new DocumentWrapper(context.Host.Application.ActiveDocument);
+
+                AlignmentTests.Run(document);
+
+                //GeometryTests.Run(document);
+
+                //Console.WriteLine(document.Version);
 
                 TestConsole.Success("All tests completed");
             }

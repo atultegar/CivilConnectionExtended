@@ -1,21 +1,31 @@
 ﻿using CivilConnection.Contracts.Models.Civil;
+using CivilConnection.Interop.Services;
 using CivilConnection.Interop.Wrappers;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace CivilConnection.Interop.Converters
 {
     public static class AlignmentConverter
     {
-        public static AlignmentData Convert(AlignmentWrapper wrapper)
+        public static AlignmentData Convert(AlignmentWrapper wrapper, AlignmentService service)
         {
+            var alignment = wrapper.ComObject;
+
             return new AlignmentData
             {
                 Name = wrapper.Name,
-                Length = wrapper.Length
+                Length = wrapper.Length,
+                StartingStation = wrapper.StartingStation,
+                EndingStation = wrapper.EndingStation,
+
+                GeometryStations = service.GetGeometryStations(alignment).ToList(),
+
+                PIStations = service.GetPIStations(alignment).ToList(),
+
+                SuperTransitionStations = service.GetSuperTransStations(alignment).ToList(),
+
+                EquationStations = service.GetEquationStations(alignment).ToList(),
+
+                StationAhead = service.GetStationsAhead(alignment).ToList()
             };
         }
     }

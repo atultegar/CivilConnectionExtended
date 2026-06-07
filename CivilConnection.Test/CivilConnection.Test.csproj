@@ -56,5 +56,9 @@
 	<ItemGroup>
 	  <ProjectReference Include="..\CivilConnection.Interop\CivilConnection.Interop.csproj" />
 	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="Helpers\" />
+	</ItemGroup>
 	
 </Project>

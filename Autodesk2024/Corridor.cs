@@ -1,54 +1,53 @@
-﻿// Copyright (c) 2016 Autodesk, Inc. All rights reserved.
-// Author: paolo.serra@autodesk.com
+﻿// Copyright (c) 2016 Autodesk, Inc.
+// Copyright (c) 2026 Atul Tegar
+//
+// Original Author: paolo.serra@autodesk.com
+// Maintained and extended by: atul.tegar@gmail.com
 // 
 // Licensed under the Apache License, Version 2.0 (the "License").
 // You may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
+//
 //    http://www.apache.org/licenses/LICENSE-2.0
 // 
-//  Unless required by applicable law or agreed to in writing, software
+// Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
-// implied.  See the License for the specific language governing
-// permissions and limitations under the License.
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
-using System.Runtime;
-using System.Runtime.InteropServices;
-
-using Autodesk.AutoCAD.Interop;
-using Autodesk.AutoCAD.Interop.Common;
-using Autodesk.AECC.Interop.UiRoadway;
 using Autodesk.AECC.Interop.Roadway;
-using Autodesk.AECC.Interop.Land;
-using Autodesk.AECC.Interop.UiLand;
-using System.Reflection;
-
-using Autodesk.DesignScript.Runtime;
 using Autodesk.DesignScript.Geometry;
+using Autodesk.DesignScript.Runtime;
+using CivilConnection.Interop.Services;
+using CivilConnection.Interop.Wrappers;
 
 //using Dynamo.Wpf.Nodes;
 
-using ProtoCore.Properties;
-using System.Xml;
+using System;
+using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
+using System.Xml;
 
 namespace CivilConnection
 {
+
     /// <summary>
     /// Corridor obejct type.
     /// </summary>
     public class Corridor
     {
+        #region PRIVATE MEMBERS
+
+        internal readonly CorridorWrapper _corridor;
+
+        private readonly CorridorService _corridorService;
+                
+        #endregion
+
         #region PRIVATE PROPERTIES
-        /// <summary>
-        /// The corridor
-        /// </summary>
-        internal AeccCorridor _corridor;
+        
         /// <summary>
         /// The baselines
         /// </summary>
@@ -56,7 +55,7 @@ namespace CivilConnection
         /// <summary>
         /// The document
         /// </summary>
-        internal AeccRoadwayDocument _document;
+        internal DocumentWrapper _document;
         /// <summary>
         /// Corridor Applied Subassembly Shapes
         /// </summary>
@@ -85,14 +84,14 @@ namespace CivilConnection
         /// <value>
         /// The name.
         /// </value>
-        public string Name { get { return _corridor.DisplayName; } }
+        public string Name => _corridor.DisplayName;
         /// <summary>
         /// Gets the internal element.
         /// </summary>
         /// <value>
         /// The internal element.
         /// </value>
-        internal AeccCorridor InternalElement { get { return this._corridor; } }
+        internal CorridorWrapper InternalElement  => _corridor;
 
         /// <summary>
         /// Gets the corridor applied subassembly shapes.
@@ -134,21 +133,21 @@ namespace CivilConnection
         /// </summary>
         /// <param name="corridor">The corridor.</param>
         /// <param name="doc">The document.</param>
-        internal Corridor(AeccCorridor corridor, AeccRoadwayDocument doc)
+        internal Corridor(CorridorWrapper corridor)
         {
-            this._corridor = corridor;
-            this._document = doc;
+            _corridor = corridor;
+
             IList<Baseline> bls = new List<Baseline>();
 
             int index = 0;
-            foreach (AeccBaseline b in corridor.Baselines)
+            foreach (var b in corridor.Baselines)
             {
                 bls.Add(new Baseline(b, index, this));
                 ++index;
             }
 
-            this._baselines = bls;
-            this._corridorFeaturelinesXMLExported = false;
+            _baselines = bls;
+            _corridorFeaturelinesXMLExported = false;
         }
 
         /// <summary>
@@ -179,19 +178,19 @@ namespace CivilConnection
 
             IList<IList<IList<IList<IList<IList<Point>>>>>> output = new List<IList<IList<IList<IList<IList<Point>>>>>>();
 
-            foreach (AeccBaseline b in this._corridor.Baselines)
+            foreach (var b in this._corridor.Baselines)
             {
                 IList<IList<IList<IList<IList<Point>>>>> baselineColl = new List<IList<IList<IList<IList<Point>>>>>();
 
-                foreach (AeccBaselineRegion blr in b.BaselineRegions)
+                foreach (var blr in b.BaselineRegions)
                 {
                     IList<IList<IList<IList<Point>>>> regionColl = new List<IList<IList<IList<Point>>>>();
 
-                    foreach (AeccAppliedAssembly assembly in blr.AppliedAssemblies)
+                    foreach (var assembly in blr.AppliedAssemblies)
                     {
                         IList<IList<IList<Point>>> assemblyColl = new List<IList<IList<Point>>>();
 
-                        foreach (AeccAppliedSubassembly sub in assembly.AppliedSubassemblies)
+                        foreach (var sub in assembly.AppliedSubassemblies)
                         {
                             IList<IList<Point>> subColl = new List<IList<Point>>();
 

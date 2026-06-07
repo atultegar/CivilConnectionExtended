@@ -28,7 +28,7 @@ namespace CivilConnectionDynamo
 
             Documents = _documentService.GetAllDocuments().Select(x =>  new CivilDocument(x)).ToList();
 
-            ActiveDocument = new CivilDocument(_documentService.ActiveDocument());
+            ActiveDocument = new CivilDocument(_documentService.ActiveDocument(_context));
 
             InitializeSession();
 

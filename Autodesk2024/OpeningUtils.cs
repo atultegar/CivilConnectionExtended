@@ -11,31 +11,11 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
 // implied.  See the License for the specific language governing
 // permissions and limitations under the License.
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Xml;
-using System.IO;
-
-using Revit.Application;
-using Revit.Elements.Views;
-using Revit.Elements;
-using Revit.Transaction;
-using RevitServices.Transactions;
 using RevitServices.Persistence;
-
-using Autodesk.DesignScript.Runtime;
 using Autodesk.DesignScript.Geometry;
 using Revit.GeometryConversion;
-
-using Autodesk.AECC.Interop.Roadway;
-using Autodesk.AECC.Interop.UiRoadway;
-using Autodesk.AECC.Interop.Land;
-using Autodesk.AECC.Interop.UiLand;
-
-using Autodesk.AutoCAD.Interop.Common;
 
 using Autodesk.Revit.DB;
 

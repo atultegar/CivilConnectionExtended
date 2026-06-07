@@ -1,35 +1,28 @@
-﻿// Copyright (c) 2016 Autodesk, Inc. All rights reserved.
-// Author: paolo.serra@autodesk.com
+﻿// Copyright (c) 2016 Autodesk, Inc.
+// Copyright (c) 2026 Atul Tegar
+//
+// Original Author: paolo.serra@autodesk.com
+// Maintained and extended by: atul.tegar@gmail.com
 // 
 // Licensed under the Apache License, Version 2.0 (the "License").
 // You may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
+//
 //    http://www.apache.org/licenses/LICENSE-2.0
 // 
-//  Unless required by applicable law or agreed to in writing, software
+// Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
-// implied.  See the License for the specific language governing
-// permissions and limitations under the License.
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-using System.Runtime;
-using System.Runtime.InteropServices;
-
-using Autodesk.AutoCAD.Interop;
-using Autodesk.AutoCAD.Interop.Common;
-using Autodesk.AECC.Interop.UiRoadway;
-using Autodesk.AECC.Interop.Roadway;
-using System.Reflection;
-
-using Autodesk.DesignScript.Runtime;
 using Autodesk.DesignScript.Geometry;
 using System.Xml;
 using System.Globalization;
+using CivilConnection.Interop.Wrappers;
 
 namespace CivilConnection
 {
@@ -38,10 +31,15 @@ namespace CivilConnection
     /// </summary>
     public class BaselineRegion
     {
+        #region INTERNAL
+
+        internal readonly BaselineRegionWrapper _baselineRegion;
+
+        #endregion
+
         #region PRIVATE PROPERTIES
 
         private Baseline _baseline;
-        private AeccBaselineRegion _blr;
         private double _start;
         private double _end;
         private double[] _stations;
@@ -59,7 +57,7 @@ namespace CivilConnection
         /// <value>
         /// The internal element.
         /// </value>
-        internal object InternalElement { get { return this._blr; } }
+        internal object InternalElement => _baselineRegion;
 
         #endregion
 
@@ -71,14 +69,14 @@ namespace CivilConnection
         /// <value>
         /// The start.
         /// </value>
-        public double Start { get { return _start; } }
+        public double Start => _baselineRegion.StartStation;
         /// <summary>
         /// Gets theregion end station.
         /// </summary>
         /// <value>
         /// The end.
         /// </value>
-        public double End { get { return _end; } }
+        public double End => _baselineRegion.EndStation;
         /// <summary>
         /// Gets the region stations.
         /// </summary>
@@ -96,13 +94,13 @@ namespace CivilConnection
         {
             get
             {
-                if (this._subassemblies.Count != 0)
+                if (_subassemblies.Count != 0)
                 {
-                    return this._subassemblies;
+                    return _subassemblies;
                 }
 
                 // Calculate these objects only when they are required
-                foreach (AeccAppliedSubassembly asa in this._blr.AppliedAssemblies.Item(0).AppliedSubassemblies)
+                foreach (var asa in _baselineRegion.AppliedAssemblies.First().AppliedSubassemblies)
                 {
                     try
                     {
@@ -110,13 +108,13 @@ namespace CivilConnection
 
                         try
                         {
-                            this._subassemblies.Add(new Subassembly(asa.SubassemblyDbEntity, asa.Corridor));
+                            _subassemblies.Add(new Subassembly(asa.SubassemblyDbEntity, asa.Corridor));
                         }
                         catch (Exception ex)
                         {
-                            this._subassemblies.Add(null);
+                            _subassemblies.Add(null);
 
-                            Utils.Log(string.Format("ERROR: {0}", ex.Message));
+                            Utils.Log($"ERROR: {ex.Message}");
 
                             throw new Exception("Subassemblies Failed\n\n" + ex.Message);
                         }
@@ -131,7 +129,7 @@ namespace CivilConnection
                     }
                 }
 
-                return this._subassemblies;
+                return _subassemblies;
             }
         }
 
@@ -160,136 +158,7 @@ namespace CivilConnection
         /// </summary>
         public int Index { get { return _index; } }
 
-        /// <summary>
-        /// Gets the Shapes profile of the applied subassemblies in the BaselineRegion.
-        /// </summary>
-        private IList<IList<IList<AppliedSubassemblyShape>>> Shapes_
-        {
-            get
-            {
-                if (this._shapes.Count != 0)
-                {
-                    return this._shapes;
-                }
-
-                Utils.Log(string.Format("BaselineRegion.Shapes started...", ""));
-
-                double[] stations = this._blr.AppliedAssemblies.Stations;
-
-                int stationCounter = 0;
-
-                // Get the Applied Subassembly Shapes
-                foreach (AeccAppliedAssembly a in this._blr.AppliedAssemblies)
-                {
-                    double station = Math.Round(stations[stationCounter], 5);
-
-                    Utils.Log(string.Format("AppliedAssembly Station {0} started...", station));
-
-                    IList<IList<AppliedSubassemblyShape>> a_list = new List<IList<AppliedSubassemblyShape>>();
-
-                    var coll = a.AppliedSubassemblies.Cast<AeccAppliedSubassembly>().GroupBy(x => x.SubassemblyDbEntity.Handle);
-
-                    foreach (var group in coll)
-                    {
-                        Utils.Log(string.Format("AssemblyGroup started...", ""));
-
-                        foreach (AeccAppliedSubassembly s in group)
-                        {
-                            string handle = s.SubassemblyDbEntity.Handle;
-
-                            IList<AppliedSubassemblyShape> s_list = new List<AppliedSubassemblyShape>();
-
-                            string subname = s.SubassemblyDbEntity.DisplayName;
-
-                            Utils.Log(string.Format("AppliedSubassembly {0} started...", subname));
-
-                            int counter = 0;
-
-                            foreach (AeccCalculatedShape cs in s.CalculatedShapes)
-                            {
-                                Utils.Log(string.Format("CalculatedShape started...", ""));
-
-                                var codes = cs.CorridorCodes.Cast<string>().ToList();
-
-                                string name = string.Join("_", this._baseline.CorridorName, this._baseline.Index, this.Index, this._assembly, subname, handle, counter);  // verify the names
-
-
-                                IList<Point> pts = new List<Point>();  // 20190413
-
-                                foreach (AeccCalculatedLink cl in cs.CalculatedLinks)
-                                {
-
-
-                                    foreach (AeccCalculatedPoint cp in cl.CalculatedPoints)
-                                    {
-
-                                        var soe = cp.GetStationOffsetElevationToBaseline();
-
-                                        dynamic pt = this._baseline._baseline.StationOffsetElevationToXYZ(soe);
-
-                                        Point p = Point.ByCoordinates(pt[0], pt[1], pt[2]);
-
-                                        if (!pts.Contains(p))
-                                        {
-                                            pts.Add(p);
-                                        }
-
-                                    }
-
-                                }
-
-                                PolyCurve pro = null;
-
-                                try
-                                {
-                                    pro = PolyCurve.ByPoints(pts, true);
-                                }
-                                catch (Exception ex)
-                                {
-                                    Utils.Log(string.Format("ERROR: Cannot Create PolyCurve By Points {0}", ex.Message));
-                                }
-
-                                if (pro != null)
-                                {
-                                    AppliedSubassemblyShape sh = new AppliedSubassemblyShape(name, pro, codes, station);
-
-                                    s_list.Add(sh);
-
-                                    ++counter;
-                                }
-
-                                foreach (var item in pts)
-                                {
-                                    if(item != null)
-                                    {
-                                        item.Dispose();
-                                    }
-                                }
-
-                                Utils.Log(string.Format("CalculatedShape completed.", ""));
-                            }
-
-                            a_list.Add(s_list);
-
-                            Utils.Log(string.Format("AppliedSubassembly completed.", ""));
-                        }
-
-                        Utils.Log(string.Format("AppliedAssembly completed.", ""));
-                    }
-
-                    this._shapes.Add(a_list);
-
-                    ++stationCounter;
-
-                    Utils.Log(string.Format("AssemblyGroup completed.", ""));
-                }
-
-                Utils.Log(string.Format("BaselineRegion.Shapes completed.", ""));
-
-                return _shapes;
-            }
-        }
-
+        
         /// <summary>
         /// Gets the Shapes profile of the applied subassemblies in the BaselineRegion.
         /// </summary>
@@ -297,12 +166,12 @@ namespace CivilConnection
         {
             get
             {
-                if (this._shapes.Count != 0)
+                if (_shapes.Count != 0)
                 {
-                    return this._shapes;
+                    return _shapes;
                 }
 
-                Utils.Log(string.Format("BaselineRegion.Shapes started...", ""));
+                Utils.LogMethodStart(this);
 
                 string xmlPath = System.IO.Path.Combine(Environment.GetEnvironmentVariable("TMP", EnvironmentVariableTarget.User), "CorridorShapes.xml");  // Revit 2020 changed the path to the temp at a session level
 
@@ -314,9 +183,9 @@ namespace CivilConnection
                     return null;
                 }
 
-                var doc = this._baseline._baseline.Alignment.Document as AeccRoadwayDocument;
+                var doc = _baseline.InternalElement.Alignment.Document;
 
-                doc.SendCommand(string.Format("-ExportSubassemblyShapesToXML\n{0}\n{1}\n{2}\n", this._baseline._baseline.Corridor.Handle, this._baseline.Index, this.Index));
+                doc.SendCommand(string.Format("-ExportSubassemblyShapesToXML\n{0}\n{1}\n{2}\n", _baseline.InternalElement.Corridor.Handle, _baseline.Index, Index));
 
                 DateTime start = DateTime.Now;
 
@@ -345,7 +214,7 @@ namespace CivilConnection
 
                     Utils.Log("Processing XML...");
 
-                    foreach (XmlElement corridor in xmlDoc.GetElementsByTagName("Corridor").Cast<XmlElement>().First(x => x.Attributes["Name"].Value == this._baseline.CorridorName))
+                    foreach (XmlElement corridor in xmlDoc.GetElementsByTagName("Corridor").Cast<XmlElement>().First(x => x.Attributes["Name"].Value == _baseline.CorridorName))
                     {
 
                         foreach (XmlElement baseline in corridor.GetElementsByTagName("Baseline"))
@@ -472,119 +341,13 @@ namespace CivilConnection
                     Utils.Log("ERROR: Failed to locate CorridorShapes.xml in the Temp folder.");
                 }
 
-                Utils.Log(string.Format("BaselineRegion.Shapes completed.", ""));
+                Utils.LogMethodEnd(this);
 
                 return _shapes;
             }
         }
 
-        /// <summary>
-        /// Gets the Links profile of the applied subassemblies in the BaselineRegion.
-        /// </summary>
-        //public List<List<List<Geometry>>> Links
-        private IList<IList<IList<AppliedSubassemblyLink>>> Links_
-        {
-            get
-            {
-                if (this._links.Count != 0)
-                {
-                    return this._links;
-                }
-
-                Utils.Log(string.Format("BaselineRegion.Links started...", ""));
-
-                double[] stations = this._blr.AppliedAssemblies.Stations;
-
-                int stationCounter = 0;
-
-                // Get the Applied Subassembly Links
-                foreach (AeccAppliedAssembly a in this._blr.AppliedAssemblies)
-                {
-                    double station = Math.Round(stations[stationCounter], 5);
-
-                    IList<IList<AppliedSubassemblyLink>> a_list = new List<IList<AppliedSubassemblyLink>>();
-
-                    var coll = a.AppliedSubassemblies.Cast<AeccAppliedSubassembly>().GroupBy(x => x.SubassemblyDbEntity.Handle);
-
-                    foreach (var group in coll)
-                    {
-                        foreach (AeccAppliedSubassembly s in group)
-                        {
-                            string handle = s.SubassemblyDbEntity.Handle;
-
-                            IList<AppliedSubassemblyLink> s_list = new List<AppliedSubassemblyLink>();
-
-                            string subname = s.SubassemblyDbEntity.DisplayName;
-
-                            int counter = 0;
-
-                            foreach (AeccCalculatedLink cl in s.CalculatedLinks)
-                            {
-                                var codes = cl.CorridorCodes.Cast<string>().ToList();
-
-                                string name = string.Join("_", this._baseline.CorridorName, this._baseline.Index, this.Index, this._assembly, subname, handle, counter);  // verify the names
-
-                                IList<Point> pts = new List<Point>();
-
-                                foreach (AeccCalculatedPoint cp in cl.CalculatedPoints)
-                                {
-                                    dynamic pt = this._baseline._baseline.StationOffsetElevationToXYZ(cp.GetStationOffsetElevationToBaseline());
-
-                                    Point p = Point.ByCoordinates(pt[0], pt[1], pt[2]);
-
-                                    pts.Add(p);
-                                }
-
-                                pts = Point.PruneDuplicates(pts, 0.00001).ToList();
-
-                                if (pts.Count > 1)
-                                {
-                                    PolyCurve poly = null;
-
-                                    try
-                                    {
-                                        poly = PolyCurve.ByPoints(pts);
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        Utils.Log(string.Format("ERROR: Cannot Create PolyCurve By Points {0}", ex.Message));
-                                    }
-
-                                    if (poly != null)
-                                    {
-                                        AppliedSubassemblyLink sh = new AppliedSubassemblyLink(name, poly, codes, station);
-
-                                        s_list.Add(sh);
-
-                                        ++counter;
-                                    }
-                                }
-
-                                foreach (var item in pts)
-                                {
-                                    if (item != null)
-                                    {
-                                        item.Dispose();
-                                    }
-                                }
-                            }
-
-                            a_list.Add(s_list);
-
-                        }
-                    }
-
-                    this._links.Add(a_list);
-
-                    ++stationCounter;
-                }
-
-                Utils.Log(string.Format("BaselineRegion.Links completed.", ""));
-
-                return _links;
-            }
-        }
-
+        
         /// <summary>
         /// Gets the Links profile of the applied subassemblies in the BaselineRegion.
         /// </summary>
@@ -598,7 +361,7 @@ namespace CivilConnection
                     return this._links;
                 }
 
-                Utils.Log(string.Format("BaselineRegion.Links started...", ""));
+                Utils.LogMethodStart(this);
 
                 IList<IList<IList<AppliedSubassemblyLink>>> corridorLinks = new List<IList<IList<AppliedSubassemblyLink>>>();
 
@@ -612,9 +375,9 @@ namespace CivilConnection
                     return null;
                 }
 
-                var doc = this._baseline._baseline.Alignment.Document as AeccRoadwayDocument;
+                var doc = _baseline.InternalElement.Alignment.Document;
 
-                doc.SendCommand(string.Format("-ExportSubassemblyLinksToXML\n{0}\n{1}\n{2}\n", this._baseline._baseline.Corridor.Handle, this._baseline.Index, this.Index));
+                doc.SendCommand(string.Format("-ExportSubassemblyLinksToXML\n{0}\n{1}\n{2}\n", _baseline.InternalElement.Corridor.Handle, _baseline.Index, Index));
 
                 DateTime start = DateTime.Now;
 
@@ -640,7 +403,7 @@ namespace CivilConnection
                     XmlDocument xmlDoc = new XmlDocument();
                     xmlDoc.Load(xmlPath);
 
-                    foreach (XmlElement corridor in xmlDoc.GetElementsByTagName("Corridor").Cast<XmlElement>().First(x => x.Attributes["Name"].Value == this._baseline.CorridorName))
+                    foreach (XmlElement corridor in xmlDoc.GetElementsByTagName("Corridor").Cast<XmlElement>().First(x => x.Attributes["Name"].Value == _baseline.CorridorName))
                     {
                         foreach (XmlElement baseline in corridor.GetElementsByTagName("Baseline"))
                         {
@@ -677,7 +440,7 @@ namespace CivilConnection
                                         }
                                         catch (Exception ex)
                                         {
-                                            Utils.Log(string.Format("ERROR: {0} X {1}", station, ex.Message));
+                                            Utils.Log($"ERROR: {station} X {ex.Message}");
                                         }
                                         try
                                         {
@@ -685,7 +448,7 @@ namespace CivilConnection
                                         }
                                         catch (Exception ex)
                                         {
-                                            Utils.Log(string.Format("ERROR: {0} Y {1}", station, ex.Message));
+                                            Utils.Log($"ERROR: {station} Y {ex.Message}");
                                         }
 
                                         try
@@ -694,7 +457,7 @@ namespace CivilConnection
                                         }
                                         catch (Exception ex)
                                         {
-                                            Utils.Log(string.Format("ERROR: {0} Z {1}", station, ex.Message));
+                                            Utils.Log($"ERROR: {station} Z {ex.Message}",);
                                             continue;
                                         }
 
@@ -726,7 +489,7 @@ namespace CivilConnection
                                         }
                                         catch (Exception ex)
                                         {
-                                            Utils.Log(string.Format("ERROR: {0} {1} {2}", name, station, ex.Message));
+                                            Utils.Log($"ERROR: {name} {station} {ex.Message}");
                                         }
 
                                         if (appSubLink != null)
@@ -735,12 +498,12 @@ namespace CivilConnection
                                         }
                                         else
                                         {
-                                            Utils.Log(string.Format("ERROR: The AppliedSubassemblyLink is null, Station: {0}", station));
+                                            Utils.Log($"ERROR: The AppliedSubassemblyLink is null, Station: {station}");
                                         }
                                     }
                                     else
                                     {
-                                        Utils.Log(string.Format("ERROR: Not enough points", ""));
+                                        Utils.Log($"ERROR: Not enough points");
                                     }
 
                                     foreach (var item in points)
@@ -764,7 +527,7 @@ namespace CivilConnection
                     Utils.Log("ERROR: Failed to locate CorridorLinks.xml in the Temp folder.");
                 }
 
-                Utils.Log(string.Format("BaselineRegion.Links completed.", ""));
+                Utils.LogMethodEnd(this);
 
                 return _links;
             }
@@ -778,34 +541,34 @@ namespace CivilConnection
         /// Internal constructor
         /// </summary>
         /// <param name="baseline">The baseline that holds the baseline region.</param>
-        /// <param name="blr">The internal AeccBaselineRegion</param>
+        /// <param name="baselineRegion">The internal AeccBaselineRegion</param>
         /// <param name="i">The baseline region index</param>
-        internal BaselineRegion(Baseline baseline, AeccBaselineRegion blr, int i)
+        internal BaselineRegion(Baseline baseline, BaselineRegionWrapper baselineRegion, int i)
         {
-            this._baseline = baseline;
+            _baseline = baseline;
 
-            this._blr = blr;
+            _baselineRegion = baselineRegion;
 
-            this._index = i;
-
-            try
-            {
-                this._assembly = blr.AssemblyDbEntity.DisplayName;
-            }
-            catch (Exception ex)
-            {
-                Utils.Log(string.Format("ERROR: Assembly Name Failed\t{0}", ex.Message));
-
-                this._assembly = this._index.ToString();
-            }
+            _index = i;
 
             try
             {
-                this._start = blr.StartStation; //  Math.Round(blr.StartStation, 5);  // TODO get rid of the roundings
+                _assembly = baselineRegion.AssemblyName;
             }
             catch (Exception ex)
             {
-                Utils.Log(string.Format("ERROR: Start Station Failed\t{0}", ex.Message));
+                Utils.Log($"ERROR: Assembly Name Failed\t{ex.Message}");
+
+                _assembly = _index.ToString();
+            }
+
+            try
+            {
+                _start = baselineRegion.StartStation; //  Math.Round(blr.StartStation, 5);  // TODO get rid of the roundings
+            }
+            catch (Exception ex)
+            {
+                Utils.Log($"ERROR: Start Station Failed\t{ex.Message}");
 
                 throw new Exception("Start Station Failed\n\n" + ex.Message);
             }
@@ -813,22 +576,22 @@ namespace CivilConnection
             try
             {
 
-                this._end = blr.EndStation; //  Math.Round(blr.EndStation, 5);
+                this._end = baselineRegion.EndStation; //  Math.Round(blr.EndStation, 5);
             }
             catch (Exception ex)
             {
-                Utils.Log(string.Format("ERROR: End Station Failed\t{0}", ex.Message));
+                Utils.Log($"ERROR: End Station Failed\t{ex.Message}");
 
                 throw new Exception("End Station Failed\n\n" + ex.Message);
             }
 
             try
             {
-                this._stations = blr.GetSortedStations();
+                _stations = baselineRegion.GetSortedStations();
             }
             catch (Exception ex)
             {
-                Utils.Log(string.Format("ERROR: Sorted Stations Failed\t{0}", ex.Message));
+                Utils.Log($"ERROR: Sorted Stations Failed\t{ex.Message}");
 
                 throw new Exception("Sorted Stations Failed\n\n" + ex.Message);
             }
@@ -845,7 +608,7 @@ namespace CivilConnection
         /// </returns>
         public override string ToString()
         {
-            return string.Format("BaselineRegion(Start = {0}, End = {1})", Math.Round(this.Start, 2).ToString(), Math.Round(this.End, 2).ToString());
+            return $"BaselineRegion(Start = {Math.Round(Start, 2).ToString()}, End = {Math.Round(this.End, 2).ToString()})";
         }
 
         #endregion

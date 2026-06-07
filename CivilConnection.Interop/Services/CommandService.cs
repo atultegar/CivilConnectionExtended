@@ -1,4 +1,5 @@
-﻿using System;
+﻿using CivilConnection.Interop.Wrappers;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,7 +9,7 @@ namespace CivilConnection.Interop.Services
 {
     public class CommandService
     {
-        public void SendCommand(dynamic document, string command)
+        public void SendCommand(DocumentWrapper document, string command)
         {
             document.SendCommand(command);
         }

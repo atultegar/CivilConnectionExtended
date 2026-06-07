@@ -31,10 +31,8 @@ namespace CivilConnection.Interop.Services
             return output;
         }
 
-        public CivilDocumentData ActiveDocument(string? version = null)
+        public CivilDocumentData ActiveDocument(CivilContext context)
         {
-            var context = CivilContext.Create(version);
-
             dynamic document = context.Host.Application.ActiveDocument;
 
             var wrapper = new DocumentWrapper(document);
@@ -79,25 +77,38 @@ namespace CivilConnection.Interop.Services
         //    return output;
         //}
 
-        public CivilDocumentData GetActiveDocument(CivilContext context)
+        public DocumentWrapper GetActiveDocument(CivilContext context)
         {
-            dynamic active = context.Host.Application.ActiveDocument;
+            var active = context.Host.Application.ActiveDocument;
 
-            var wrapper = new DocumentWrapper(active);
-
-            return DocumentConverter.Convert(wrapper);
+            return new DocumentWrapper(active);
         }
 
-        public IList<dynamic> GetDocuments(CivilContext context)
+        public IList<DocumentWrapper> GetDocuments(CivilContext context)
         {
-            var output = new List<dynamic>();
+            var output = new List<DocumentWrapper>();
 
             foreach (var doc in context.Host.Application.Documents)
             {
-                output.Add(doc);
+                output.Add(new DocumentWrapper(doc));
             }
 
             return output;
+        }
+
+        public UnitSettings GetUnitSettings(DocumentWrapper document)
+        {
+            if (document == null)
+                throw new ArgumentNullException(nameof(document));
+
+            var precision = document.DistancePrecision;
+
+            return new UnitSettings
+            {
+                DrawingUnit = document.DrawingUnits,
+                Precision = precision,
+                Accuracy = Math.Pow(10, -precision)
+            };
         }
     }
 }

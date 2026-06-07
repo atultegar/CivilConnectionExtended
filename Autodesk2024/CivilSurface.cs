@@ -1,24 +1,30 @@
-﻿// Copyright (c) 2019 Autodesk, Inc. All rights reserved.
-// Authors: Atul Tegar - ATTE@cowi.com, paolo.serra@autodesk.com
+﻿// Copyright (c) 2019 Autodesk, Inc.
+// Copyright (c) 2026 Atul Tegar
+//
+// Original Authors: paolo.serra@autodesk.com, atul.tegar@gmail.com
+// Maintained and extended by: atul.tegar@gmail.com
 // 
 // Licensed under the Apache License, Version 2.0 (the "License").
 // You may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
+//
 //    http://www.apache.org/licenses/LICENSE-2.0
 // 
-//  Unless required by applicable law or agreed to in writing, software
+// Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
-// implied.  See the License for the specific language governing
-// permissions and limitations under the License.
-using Autodesk.AECC.Interop.Land;
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Autodesk.DesignScript.Runtime;
 using Autodesk.DesignScript.Geometry;
+using CivilConnection.Interop.Wrappers;
+using CivilConnection.Interop.Services;
+using CivilConnection.Converters;
+using CivilConnection.Services;
 
 namespace CivilConnection
 {
@@ -27,10 +33,24 @@ namespace CivilConnection
     /// </summary>
     public class CivilSurface
     {
-        #region PRIVATE PROPERTIES
-        private AeccSurface _surface;
-        private AeccSurfaceBoundaries _boundaries;
+        #region INTERNAL
+
+        internal readonly CivilSurfaceWrapper _surface;
+
         #endregion
+
+        #region SERVICES
+
+        private readonly CivilSurfaceService _surfaceService;
+        private readonly LandXmlService _landXmlService;
+        
+
+        #endregion
+
+        /// <summary>
+        /// Gets the internal element
+        /// </summary>
+        internal CivilSurfaceWrapper InternalElement => _surface;
 
         #region PUBLIC PROPERTIES
         /// <summary>
@@ -39,165 +59,73 @@ namespace CivilConnection
         /// <value>
         /// Name of surface
         /// </value>
-        public string Name { get { return _surface.Name; } }
+        public string Name => _surface.Name;
         /// <summary>
         /// Gets the surface type
         /// </summary>
-        public string SurfaceType { get { return _surface.Type.ToString(); } }
+        public string SurfaceType => _surface.Type;
         #endregion
 
-        #region INTERNAL CONSTRUCTOR
-        /// <summary>
-        /// Gets the internal element
-        /// </summary>
-        internal AeccSurface InternalElement { get { return this._surface; } }
+        #region INTERNAL CONSTRUCTOR       
+
         /// <summary>
         /// Internal constructor
         /// </summary>
         /// <param name="surface">the internal AeccSurface</param>
-        internal CivilSurface(AeccSurface surface)
+        internal CivilSurface(CivilSurfaceWrapper surface)
         {
-            this._surface = surface;
-            this._boundaries = surface.Boundaries;  // What to do with boudanries?
+            _surface = surface ?? throw new ArgumentNullException(nameof(surface));
+            _surfaceService = new CivilSurfaceService();
         }
         #endregion
 
         #region PUBLIC METHODS
         /// <summary>
-        /// Get elevation of surface at points
+        /// Get elevation of surface at point
         /// </summary>
-        /// <param name="points">The points to process</param>
+        /// <param name="point">The point to process</param>
         /// <returns>
         /// The List of Elevations
         /// </returns>
-        public List<object> GetElevationAtPoint(List<Point> points)  // author: Atul Tegar
+        public double GetElevationAtPoint(Point point)
         {
-            Utils.Log(string.Format("CivilSurface.GetElevationAtPoint started...", ""));
+            Utils.LogMethodStart(this);
 
-            List<object> elevations = new List<object>();
-
-            foreach (Point point in points)
+            try
             {
-                try
-                {
-                    double elevation = Math.Round(this._surface.FindElevationAtXY(point.X, point.Y), 5);
+                double elevation = System.Math.Round(_surfaceService.FindElevationAtXY(_surface, point.X, point.Y), 5);
 
-                    elevations.Add(elevation);
-                }
+                Utils.LogMethodEnd(this);
 
-                catch (Exception ex)
-                {
-                    Utils.Log(string.Format("ERROR: CivilSurface.GetElevationAtPoint: The surface elevation at selected point is not found, {0}", ex.Message));
-
-                    elevations.Add(null);
-                }
+                return elevation;
             }
 
-            Utils.Log(string.Format("CivilSurface.GetElevationAtPoint completed.", ""));
+            catch (Exception ex)
+            {
+                Utils.Log($"ERROR: CivilSurface.GetElevationAtPoint: The surface elevation at selected point is not found, {ex.Message}");
 
-            return elevations;
-        }
+                return double.NaN;
+            }
+        }        
 
         /// <summary>
         /// Gets all surface points along line
         /// </summary>
-        /// <param name="lines">The lines to process</param>
+        /// <param name="line">The line to process</param>
         /// <returns>
         /// The List of Points
         /// </returns>
-        public List<List<Point>> GetElevationsAlongLine(List<Line> lines)  // author: Atul Tegar
+        public List<Point> GetPointsAlongLine(Line line)
         {
-            Utils.Log(string.Format("CivilSurface.GetElevationsAlongLine started...", ""));
+            Utils.LogMethodStart(this);
 
-            List<List<Point>> pointsOnLine = new List<List<Point>>();
+            var lineData = GeometryConverter.ToLineData(line);
 
-            Point startPoint = null;
+            var points = _surfaceService.SampleElevations(_surface, lineData);
 
-            Point endPoint = null;
+            Utils.LogMethodEnd(this);
 
-            foreach (Line line in lines)
-            {
-                List<Point> pointList = new List<Point>();
-
-                startPoint = line.StartPoint;
-
-                endPoint = line.EndPoint;
-
-                double[] surfacePoints = (double[])this._surface.SampleElevations(startPoint.X, startPoint.Y, endPoint.X, endPoint.Y);
-
-                for (int i = 0; i < surfacePoints.Length; i += 3)
-                {
-                    double pX = surfacePoints[i];
-
-                    double pY = surfacePoints[i + 1];
-
-                    double pZ = surfacePoints[i + 2];
-
-                    Point point = Point.ByCoordinates(pX, pY, pZ);
-
-                    pointList.Add(point);
-                }
-
-                pointsOnLine.Add(pointList);
-            }
-
-            startPoint.Dispose();
-            endPoint.Dispose();
-
-            Utils.Log(string.Format("CivilSurface.GetElevationsAlongLine completed.", ""));
-
-            return pointsOnLine;
-        }
-
-        /// <summary>
-        /// Gets all surface points along line
-        /// </summary>
-        /// <param name="lines">The lines to process</param>
-        /// <returns>
-        /// The List of Points
-        /// </returns>
-        public List<List<Point>> GetPointsAlongLine(List<Line> lines)  // Renamed as it confuses people
-        {
-            Utils.Log(string.Format("CivilSurface.GetPointsAlongLine started...", ""));
-
-            List<List<Point>> pointsOnLine = new List<List<Point>>();
-
-            Point startPoint = null;
-
-            Point endPoint = null;
-
-            foreach (Line line in lines)
-            {
-                List<Point> pointList = new List<Point>();
-
-                startPoint = line.StartPoint;
-
-                endPoint = line.EndPoint;
-
-                double[] surfacePoints = (double[])this._surface.SampleElevations(startPoint.X, startPoint.Y, endPoint.X, endPoint.Y);
-
-                for (int i = 0; i < surfacePoints.Length; i += 3)
-                {
-                    double pX = surfacePoints[i];
-
-                    double pY = surfacePoints[i + 1];
-
-                    double pZ = surfacePoints[i + 2];
-
-                    Point point = Point.ByCoordinates(pX, pY, pZ);
-
-                    pointList.Add(point);
-                }
-
-                pointsOnLine.Add(pointList);
-            }
-
-            startPoint.Dispose();
-            endPoint.Dispose();
-
-            Utils.Log(string.Format("CivilSurface.GetPointsAlongLine completed.", ""));
-
-            return pointsOnLine;
+            return points.Select(x => GeometryConverter.ToProtoPoint(x)).ToList();
         }
 
         /// <summary>
@@ -206,24 +134,15 @@ namespace CivilConnection
         /// <returns>
         /// The List of Points
         /// </returns>
-        public List<Point> GetSurfacePoints()  // author: Atul Tegar
+        public List<Point> GetSurfacePoints()
         {
-            Utils.Log(string.Format("CivilSurface.GetSurfacePoints started...", ""));
+            Utils.LogMethodStart(this);
 
-            List<Point> pointList = new List<Point>();
+            var points = _surfaceService.GetPoints(_surface);
 
-            double[] points = (double[])this._surface.Points;
+            Utils.LogMethodEnd(this);
 
-            for (int i = 0; i < points.Length; i += 3)
-            {
-                Point p = Point.ByCoordinates(points[i], points[i + 1], points[i + 2]);
-
-                pointList.Add(p);
-            }
-
-            Utils.Log(string.Format("CivilSurface.GetSurfacePoints completed.", ""));
-
-            return pointList;
+            return points.Select(x => GeometryConverter.ToProtoPoint(x)).ToList();
         }
 
         /// <summary>
@@ -236,7 +155,7 @@ namespace CivilConnection
         /// </returns>
         private List<Point> GetPointsBetweenLowerUpperLimits(Point lowerLeftPoint, Point upperRightPoint)  // author: Atul Tegar
         {
-            Utils.Log(string.Format("CivilSurface.GetPointsBetweenLowerUpperLimits started...", ""));
+            Utils.LogMethodStart(this);
 
             List<Point> points = new List<Point>();
 
@@ -246,7 +165,7 @@ namespace CivilConnection
             double maxX = upperRightPoint.X;
             double maxY = upperRightPoint.Y;
 
-            List<Point> surfacePoints = this.GetSurfacePoints();
+            List<Point> surfacePoints = GetSurfacePoints();
 
             foreach (Point point in surfacePoints)
             {
@@ -256,7 +175,7 @@ namespace CivilConnection
                 }
             }
 
-            Utils.Log(string.Format("CivilSurface.GetPointsBetweenLowerUpperLimits completed.", ""));
+            Utils.LogMethodEnd(this);
 
             return points;
         }
@@ -270,11 +189,11 @@ namespace CivilConnection
         /// </returns>
         public List<Point> GetPointsInBoundingBox(BoundingBox boundingBox)
         {
-            Utils.Log(string.Format("CivilSurface.GetPointsInBoundingBox started...", ""));
+            Utils.LogMethodStart(this);
 
-            List<Point> points = this.GetSurfacePoints().Where(p => boundingBox.Contains(p)).ToList();
+            List<Point> points = GetSurfacePoints().Where(p => boundingBox.Contains(p)).ToList();
 
-            Utils.Log(string.Format("CivilSurface.GetPointsInBoundingBox completed.", ""));
+            Utils.LogMethodEnd(this);
 
             return points;
         }
@@ -289,143 +208,69 @@ namespace CivilConnection
         /// </returns>
         public List<Point> GetPointsInBoundary(Curve boundary, double tolerance = 0.1)
         {
-            Utils.Log(string.Format("CivilSurface.GetPointsInBoundary started...", ""));
+            Utils.LogMethodStart(this);
+
+            var pointsInside = new List<Point>();
 
             if (!boundary.IsClosed)
             {
                 string message = "The Curve provided is not closed.";
 
-                Utils.Log(string.Format("ERROR: CivilSurface.GetPointsInBoundary {0}", message));
+                Utils.Log($"ERROR: CivilSurface.GetPointsInBoundary {message}");
 
                 throw new Exception(message);
             }
 
             Plane xy = Plane.XY();
 
-            Curve boundaryXY = boundary.PullOntoPlane(xy);
+            Curve boundaryXY = null;
 
-            Surface surf = null;
-
-            List<Point> pointsInside = new List<Point>();
+            Surface patchSurface = null;
 
             Polygon polygon = null;
 
             try
             {
-                surf = Surface.ByPatch(boundaryXY);
-            }
-            catch 
-            {
-                string message = "Unable to create surface form boundary.";
+                boundaryXY = boundary.PullOntoPlane(xy);
 
-                Utils.Log(string.Format("ERROR: CivilSurface.GetPointsInBoundary {0}", message));
-            }
-
-            if (surf != null)
-            {
-                pointsInside = this.GetSurfacePoints().Where(p => Point.ByCoordinates(p.X, p.Y).DoesIntersect(surf)).ToList();
-            }
-            else
-            {
-                if (tolerance <= 0 || tolerance > 1)
+                try
                 {
-                    tolerance = 1;
+                    patchSurface = Surface.ByPatch(boundaryXY);
+                }
+                catch
+                {
+
                 }
 
-                if (boundary is PolyCurve)
+                if (patchSurface != null)
                 {
-                   
-                    PolyCurve pc = boundary as PolyCurve;
+                    pointsInside = GetSurfacePoints().Where(p => Point.ByCoordinates(p.X, p.Y).DoesIntersect(patchSurface)).ToList();
 
-                    List<Point> points = new List<Point>();
-
-                    for (int i = 0; i < pc.NumberOfCurves; ++i)
-                    {
-                        Curve c = pc.CurveAtIndex(i);
-
-                        try
-                        {
-                            Line line = c as Line;
-                            points.Add(c.StartPoint);
-                        }
-                        catch
-                        {
-                            for (double j = 0; j < 1; j = j + tolerance)
-                            {
-                                points.Add(c.PointAtParameter(j));
-                            }
-                        }
-
-                        c.Dispose();
-                    }
-
-                    polygon = Polygon.ByPoints(points.Select(p => Point.ByCoordinates(p.X, p.Y)));
-
-                    foreach (var item in points)
-                    {
-                        if (item != null)
-                        {
-                            item.Dispose();
-                        }
-                    }
-
-                    points.Clear();
-                }
-                else if (boundary is Circle)
-                {
-                    List<Point> points = new List<Point>();
-
-                    for (double j = 0; j < 1; j = j + tolerance)
-                    {
-                        points.Add(boundary.PointAtParameter(j));
-                    }
-
-                    polygon = Polygon.ByPoints(points.Select(p => Point.ByCoordinates(p.X, p.Y)));
-
-                    foreach (var item in points)
-                    {
-                        if (item != null)
-                        {
-                            item.Dispose();
-                        }
-                    }
-
-                    points.Clear();
-
-                }
-                else if (boundary is Rectangle)
-                {
-                    polygon = Polygon.ByPoints(((Rectangle)boundary).Curves().Select(c => c.StartPoint).Select(p => Point.ByCoordinates(p.X, p.Y)));
-                }
-                else if (boundary is Polygon)
-                {
-                    polygon = boundary as Polygon;
+                    Utils.LogMethodEnd(this);
                 }
 
-                pointsInside = this.GetSurfacePoints().Where(p => polygon.ContainmentTest(Point.ByCoordinates(p.X, p.Y))).ToList();
+                polygon = CreatePolygonFromBoundary(boundary, tolerance);
+
+                if (polygon == null)
+                {
+                    Utils.LogMethodEnd(this);
+                    return pointsInside;
+                }
+
+                pointsInside = GetSurfacePoints().Where(p => polygon.ContainmentTest(Point.ByCoordinates(p.X, p.Y))).ToList();
+
+                Utils.LogMethodEnd(this);
+
+                return pointsInside;
             }
-
-            if (polygon != null)
+            finally 
             {
-                polygon.Dispose(); 
+                polygon?.Dispose();
+                patchSurface?.Dispose();
+                boundaryXY?.Dispose();
+                xy?.Dispose();
             }
-
-            xy.Dispose();
-
-            if (boundaryXY != null)
-            {
-                boundaryXY.Dispose(); 
-            }
-
-            if (surf != null)
-            {
-                surf.Dispose();
-            }
-
-            Utils.Log(string.Format("CivilSurface.GetPointsInBoundary completed.", ""));
-
-            return pointsInside;
-        }
+        }        
 
         /// <summary>
         /// Gets all the triangle surfaces in a CivilSurface
@@ -433,7 +278,17 @@ namespace CivilConnection
         /// <returns></returns>
         public IList<Surface> GetTrianglesSurfaces()
         {
-            return Utils.GetSurfaceTriangles(this);
+            Utils.LogMethodStart(this);
+
+            var xmlPath = _surfaceService.ExportSurfaceToXml(_surface);
+
+            var triangles = _landXmlService.ReadTriangles(xmlPath, Name);
+
+            var outputSurfaces = triangles.Select(x => GeometryConverter.ToSurface(x)).ToList();
+
+            Utils.LogMethodEnd(this);
+
+            return outputSurfaces;
         }
 
         /// <summary>
@@ -444,7 +299,15 @@ namespace CivilConnection
         /// <returns></returns>
         public IList<Surface> GetTrianglesSurfaces(string landXMLpath, bool onlyVisible = true)
         {
-            return Utils.GetSurfaceTrianglesByLandXML(this, landXMLpath, onlyVisible);
+            Utils.LogMethodStart(this);
+
+            var triangles = _landXmlService.ReadTriangles(landXMLpath, Name);
+
+            var outputSurfaces = triangles.Select(x => GeometryConverter.ToSurface(x)).ToList();
+
+            Utils.LogMethodEnd(this);
+
+            return outputSurfaces;
         }
 
         /// <summary>
@@ -456,7 +319,31 @@ namespace CivilConnection
         [MultiReturn(new string[]{"Points", "Faces"})]
         public Dictionary<string, object> GetFacesSurfaces(string landXMLpath, bool onlyVisible = true)
         {
-            return Utils.GetFacesLandXML(this, landXMLpath, onlyVisible);
+            Utils.LogMethodStart(this);
+
+            try
+            {
+                var mesh = _landXmlService.ReadFaces(landXMLpath, Name, onlyVisible);
+
+                var points = mesh.Points
+                    .OrderBy(x => x.Key)
+                    .Select(x => GeometryConverter.ToProtoPoint(x.Value))
+                    .ToList();
+
+                var faces = mesh.Faces
+                    .Select(x => x.ToList())
+                    .ToList();
+
+                return new Dictionary<string, object>
+                {
+                    { "Points", points },
+                    { "Faces", faces }
+                };
+            }
+            finally
+            {
+                Utils.LogMethodEnd(this);
+            }
         }
 
         /// <summary>
@@ -467,7 +354,13 @@ namespace CivilConnection
         /// <returns></returns>
         public static IList<Surface> JoinSurfaces(IList<Surface> surfaces, int limit = 100)
         {
-            return Utils.JoinSurfaces(surfaces, limit);
+            Utils.Log($"CivilSurface.Joinsurface started...");
+
+            var output = DynamoGeometryService.JoinSurfaces(surfaces, limit);
+
+            Utils.Log($"CivilSurface.Joinsurface completed...");
+
+            return output;
         }
 
         /// <summary>
@@ -480,41 +373,28 @@ namespace CivilConnection
         /// </returns>
         public Point GetIntersectionPoint(Point point, Vector vector) // author: Atul Tegar
         {
-            Utils.Log(string.Format("CivilSurface.GetIntersectionPoint Started...", ""));
+            Utils.LogMethodStart(this);
 
-            Point point2 = null;
-            double p1X = point.X;
-            double p1Y = point.Y;
-            double p1Z = point.Z;
+            var origin = GeometryConverter.ToPointData(point);
 
-            double[] p1 = { p1X, p1Y, p1Z };
-
-            double vX = vector.X;
-            double vY = vector.Y;
-            double vZ = vector.Z;
-
-            double[] direction = { vX, vY, vZ };
+            var direction = GeometryConverter.ToVectorData(vector);
 
             try
             {
-                dynamic intPoint = this._surface.IntersectPointWithSurface(p1, direction);
+                var pointData = _surfaceService.GetIntersectionPoint(_surface, origin, direction);
 
-                double p2X = intPoint[0];
-                double p2Y = intPoint[1];
-                double p2Z = intPoint[2];
-                point2 = Point.ByCoordinates(p2X, p2Y, p2Z);
+                Utils.LogMethodEnd(this);
 
+                return GeometryConverter.ToProtoPoint(pointData);
             }
-
             catch (Exception ex)
             {
-                Utils.Log(string.Format("ERROR: CivilSurface.GetIntersectionPoint: No intersection with vector and surface found, {0}", ex.Message));
-                point2 = null;
-            }
+                var message = $"ERROR: No intersection with vector and surface found, {ex.Message}";
 
-            Utils.Log(string.Format("CivilSurface.GetIntersectionPoint completed.", ""));
+                Utils.Log(message);
 
-            return point2;
+                throw new Exception(message);
+            }            
         }
 
 
@@ -526,7 +406,64 @@ namespace CivilConnection
         /// </returns>
         public override string ToString()
         {
-            return string.Format("CivilSurface(Name = {0})", this.Name);
+            return $"CivilSurface(Name = {Name})";
+        }
+
+        #endregion
+
+        #region PRIVATE METHODS
+
+        private Polygon CreatePolygonFromBoundary(Curve boundary, double tolerance)
+        {
+            if (tolerance <= 0 || tolerance > 1)
+                tolerance = 0.1;
+
+            if (boundary is Polygon polygon)
+                return polygon;
+
+            var points = new List<Point>();
+
+            if (boundary is PolyCurve polyCurve)
+            {
+                for (int i = 0; i < polyCurve.NumberOfCurves; i++)
+                {
+                    var curve = polyCurve.CurveAtIndex(i);
+
+                    if (curve is Line)
+                    {
+                        points.Add(curve.StartPoint);
+                    }
+                    else
+                    {
+                        for (double t = 0; t <= 1;  t += tolerance)
+                        {
+                            points.Add(curve.PointAtParameter(t));
+                        }
+                    }
+                }
+            }
+            else if (boundary is Circle)
+            {
+                for (double t = 0; t <= 1; t += tolerance)
+                {
+                    points.Add(boundary.PointAtParameter(t));
+                }
+            }
+            else if (boundary is Rectangle rectangle)
+            {
+                points.AddRange(
+                    rectangle.Curves()
+                        .Select(x => x.StartPoint));
+            }
+
+            if (!points.Any())
+                return null;
+
+            return Polygon.ByPoints(
+                points.Select(p => 
+                    Point.ByCoordinates(
+                        p.X,
+                        p.Y)));            
         }
 
         #endregion

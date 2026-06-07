@@ -14,34 +14,21 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-using System.Runtime;
-using System.Runtime.InteropServices;
 
 using System.IO;
 using System.Xml;
-
-using Autodesk.AutoCAD.Interop;
 using Autodesk.AutoCAD.Interop.Common;
 using Autodesk.AECC.Interop.UiRoadway;
 using Autodesk.AECC.Interop.Roadway;
 using Autodesk.AECC.Interop.Land;
-using Autodesk.AECC.Interop.UiLand;
-using System.Reflection;
 
 using Autodesk.DesignScript.Runtime;
 using Autodesk.DesignScript.Geometry;
-using System.Windows;
-using Autodesk.Revit.UI.Events;
-using Dynamo.Wpf.Utilities;
 using Point = Autodesk.DesignScript.Geometry.Point;
 using Vector = Autodesk.DesignScript.Geometry.Vector;
-using Autodesk.Aec.PropertyData.DatabaseServices;
-using Autodesk.Revit.UI;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
+using System.Runtime.CompilerServices;
 
 namespace CivilConnection
 {
@@ -190,27 +177,6 @@ namespace CivilConnection
 
             Utils.Log(string.Format("Utils.AddLayer completed.", ""));
         }
-
-        public static void AddLayers(AeccRoadwayDocument doc, List<string> layerNames)
-        {
-            Utils.Log(string.Format("Utils.AddLayers started...", ""));
-            List<string> uniqueLayerNames = layerNames.Distinct().ToList();
-
-            AcadDatabase db = doc as AcadDatabase;
-
-            foreach (string layerName in uniqueLayerNames)
-            {
-                bool found = db.Layers.Cast<AcadLayer>().Any(l => l.Name == layerName);
-
-                if (!found)
-                {
-                    db.Layers.Add(layerName);
-                }
-            }
-
-            Utils.Log(string.Format("Utils.AddLayers completed.", ""));
-        }
-
 
         /// <summary>
         /// Freezes the layers.
@@ -396,47 +362,6 @@ namespace CivilConnection
 
             return p.Handle;
         }
-        
-        [IsVisibleInDynamoLibrary(false)]
-        public static string AddDBPointByPoint(AeccRoadwayDocument doc, Point point, string layer)
-        {
-            Utils.Log(string.Format("Utils.AddDBPointByPoint started...", ""));
-            AddLayer(doc, layer);
-            AcadDatabase db = doc as AcadDatabase;
-            AcadModelSpace ms = db.ModelSpace;
-
-            double[] coordinates = new double[] { point.X, point.Y, point.Z };
-
-            var dbPoint = ms.AddPoint(coordinates);
-            dbPoint.Layer = layer;
-
-            Utils.Log(string.Format("Utils.AddDBPointByPoint completed.", ""));
-            return dbPoint.Handle;
-        }
-
-        [IsVisibleInDynamoLibrary(false)]
-        public static List<string> AddDBPointsByPoints(AeccRoadwayDocument doc, List<Point> points, List<string> layers)
-        {
-            Utils.Log(string.Format("Utils.AddDBPointsByPoints started...", ""));
-
-            List<string> result = new List<string>();
-
-            AddLayers(doc, layers);
-            AcadDatabase db = doc as AcadDatabase;
-            AcadModelSpace ms = db.ModelSpace;
-
-            for (int i = 0; i < points.Count; i++)
-            {
-                double[] coordinates = new double[] { points[i].X, points[i].Y, points[i].Z };
-                var dbPoint = ms.AddPoint(coordinates);
-                dbPoint.Layer = layers[i];
-                result.Add(dbPoint.Handle);
-            }
-
-            Utils.Log(string.Format("Utils.AddDBPointsByPoints completed.", ""));
-            return result;
-        }
-
 
         /// <summary>
         /// Adds the point group by point.
@@ -1932,6 +1857,16 @@ namespace CivilConnection
             }
         }
 
+        public static void LogMethodStart(object instance, [CallerMemberName] string methodName = "")
+        {
+            Log($"{instance.GetType().Name}.{methodName} started...");
+        }
+
+        public static void LogMethodEnd(object instance, [CallerMemberName] string methodName = "")
+        {
+            Log($"{instance.GetType().Name}.{methodName} completed...");
+        }
+
         /// <summary>
         /// Finalizes the Log file.
         /// </summary>
@@ -2885,55 +2820,7 @@ namespace CivilConnection
             return new Dictionary<string, object>() { { "Points", points }, { "Faces", faces } };
         }        
 
-        /// <summary>
-        /// Recursive function to join surfaces into a PolySurface
-        /// </summary>
-        /// <param name="surfaces">The surface list to process</param>
-        /// <param name="limit">The amount of surfaces to join together</param>
-        /// <returns></returns>
-        [IsVisibleInDynamoLibrary(false)]
-        public static IList<Surface> JoinSurfaces(IList<Surface> surfaces, int limit = 100)  // 20190922
-        {
-            Utils.Log(string.Format("Utils.JoinSurfaces started on {0} surfaces", surfaces.Count));
-
-            if (surfaces.Count == 1)
-            {
-                Utils.Log(string.Format("Utils.JoinSurfaces completed.", ""));
-
-                return surfaces;
-            }
-            else
-            {
-                IList<Surface> result = new List<Surface>();
-
-                for (int i = 0; i < surfaces.Count; i = i + limit)
-                {
-                    IList<Surface> temp = new List<Surface>();
-
-                    for (int j = i; j < i + limit; ++j)
-                    {
-                        if (j < surfaces.Count)
-                        {
-                            temp.Add(surfaces[j]);
-                        }
-                        else
-                        {
-                            break;
-                        }
-                    }
-
-                    PolySurface ps = PolySurface.ByJoinedSurfaces(temp);
-
-                    result.Add(ps);
-                }
-
-                result = JoinSurfaces(result);
-
-                Utils.Log(string.Format("Utils.JoinSurfaces completed.", ""));
-
-                return result;
-            }
-        }
+        
 
         public static string CreatePropertySetDefinition(AeccRoadwayDocument doc, string path)
         {
@@ -3083,6 +2970,14 @@ namespace CivilConnection
                     Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
                     "Autodesk",
                     "ApplicationPlugins");
+        }
+
+        internal static void DisposeObjects(params DesignScriptEntity[] geometry)
+        {
+            foreach (var g in geometry)
+            {
+                g?.Dispose();
+            }
         }
 
 

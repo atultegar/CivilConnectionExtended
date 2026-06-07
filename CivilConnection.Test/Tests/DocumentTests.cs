@@ -1,4 +1,5 @@
 ﻿using CivilConnection.Contracts.Interfaces;
+using CivilConnection.Interop.Context;
 using CivilConnection.Interop.Services;
 using CivilConnection.Test.Utilities;
 using System;
@@ -7,27 +8,24 @@ namespace CivilConnection.Test.Tests
 {
     public static class DocumentTests
     {
-        public static void Run()
+        public static void Run(CivilContext context)
         {
             TestConsole.Header("DOCUMENT TESTS");
 
             var service = new DocumentService();
 
-            //var documents = service.GetAllDocuments();
+            var documents = service.GetDocuments(context);
 
-            //Console.WriteLine($"Documents found: {documents.Count}");
+            Console.WriteLine($"Documents found: {documents.Count}");
 
-            //foreach (var document in documents)
-            //{
-            //    Console.WriteLine($"{document.Name} | {document.Version}");
-            //}
+            foreach (var document in documents)
+            {
+                Console.WriteLine($"Document {documents.IndexOf(document)}: {document.Name}");
+            }
 
-            string version = "2027";
+            var activeDoc = service.GetActiveDocument(context);
 
-            var activeDoc = service.ActiveDocument(version);
-
-            Console.WriteLine($"ActiveDocument in Version: {version}");
-            Console.WriteLine($"{activeDoc.Name} | {activeDoc.Version}");
+            Console.WriteLine($"ActiveDocument: {activeDoc.Name}");
         }
     }
 }

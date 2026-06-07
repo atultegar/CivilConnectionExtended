@@ -8,11 +8,46 @@ namespace CivilConnection.Interop.Wrappers.Base
 {
     public abstract class ComWrapper
     {
-        protected dynamic InternalObject;
+        public dynamic ComObject { get; }
 
         protected ComWrapper(object obj)
         {
-            InternalObject = obj;
+            ComObject = obj ?? throw new ArgumentNullException(nameof(obj));
+        }
+
+        public string Handle
+        {
+            get
+            {
+                try
+                {
+                    return (string)ComObject.Handle;
+                }
+                catch
+                {
+                    return string.Empty;
+                }
+            }
+        }
+
+        public long? ObjectId
+        {
+            get
+            {
+                try
+                {
+                    return Convert.ToInt64(ComObject.ObjectId);
+                }
+                catch
+                {
+                    return null;
+                }
+            }
+        }
+
+        public override string ToString()
+        {
+            return $"{GetType().Name}(Handle={Handle})";
         }
     }
 }

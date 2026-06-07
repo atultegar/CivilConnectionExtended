@@ -1,35 +1,30 @@
-﻿// Copyright (c) 2016 Autodesk, Inc. All rights reserved.
-// Author: paolo.serra@autodesk.com
+﻿// Copyright (c) 2016 Autodesk, Inc.
+// Copyright (c) 2026 Atul Tegar
+//
+// Original Author: paolo.serra@autodesk.com
+// Maintained and extended by: atul.tegar@gmail.com
 // 
 // Licensed under the Apache License, Version 2.0 (the "License").
 // You may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
+//
 //    http://www.apache.org/licenses/LICENSE-2.0
 // 
-//  Unless required by applicable law or agreed to in writing, software
+// Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
-// implied.  See the License for the specific language governing
-// permissions and limitations under the License.
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+using Autodesk.AECC.Interop.Land;
+using Autodesk.DesignScript.Geometry;
+using Autodesk.DesignScript.Runtime;
+using CivilConnection.Contracts.Models.Civil;
+using CivilConnection.Interop.Services;
+using CivilConnection.Interop.Wrappers;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-using System.Runtime;
-using System.Runtime.InteropServices;
-
-using Autodesk.AutoCAD.Interop;
-using Autodesk.AutoCAD.Interop.Common;
-using Autodesk.AECC.Interop.UiRoadway;
-using Autodesk.AECC.Interop.Roadway;
-using Autodesk.AECC.Interop.Land;
-using Autodesk.AECC.Interop.UiLand;
-using System.Reflection;
-
-using Autodesk.DesignScript.Runtime;
-using Autodesk.DesignScript.Geometry;
 
 namespace CivilConnection
 {
@@ -38,9 +33,25 @@ namespace CivilConnection
     /// </summary>
     public class Alignment
     {
-        #region PRIVATE PROPERTIES
-        private AeccAlignment _alignment;
-        private AeccAlignmentEntities _entities;
+        #region PRIVATE MEMBERS
+
+        private readonly AlignmentData _data;
+
+        private readonly AlignmentService _alignmentService;
+        
+        internal readonly AlignmentWrapper _alignment;
+
+        #endregion
+
+        #region INTERNAL
+
+        internal Alignment(AlignmentService alignmentService)
+        {
+            _alignmentService = alignmentService;
+        }
+
+        internal AlignmentData Data => _data;
+
         #endregion
 
         #region PUBLIC PROPERTIES
@@ -50,58 +61,28 @@ namespace CivilConnection
         /// <value>
         /// The name.
         /// </value>
-        public string Name { get { return _alignment.DisplayName; } }
+        public string Name => _alignment.Name;
         /// <summary>
         /// Gets the length.
         /// </summary>
         /// <value>
         /// The length.
         /// </value>
-        public double Length { get { return _alignment.Length; } }
+        public double Length => _alignment.Length;
         /// <summary>
         /// Gets the start.
         /// </summary>
         /// <value>
         /// The start.
         /// </value>
-        public double Start { get { return _alignment.StartingStation; } }
+        public double Start => _alignment.StartingStation;
         /// <summary>
         /// Gets the end.
         /// </summary>
         /// <value>
         /// The end.
         /// </value>
-        public double End { get { return _alignment.EndingStation; } }
-
-        [SupressImportIntoVM]
-        private double[] _GetGeometryStations()
-        {
-            return _alignment.GetStations(AeccStationType.aeccGeometryPoint, this.Start, this.End).Cast<AeccAlignmentStation>().Select(x => x.Station).ToArray();
-        }
-
-        [SupressImportIntoVM]
-        private double[] _GetPIStations()
-        {
-            return _alignment.GetStations(AeccStationType.aeccPIPoint, this.Start, this.End).Cast<AeccAlignmentStation>().Select(x => x.Station).ToArray();
-        }
-
-        [SupressImportIntoVM]
-        private double[] _GetSuperTransStations()
-        {
-            return _alignment.GetStations(AeccStationType.aeccSuperTransPoint, this.Start, this.End).Cast<AeccAlignmentStation>().Select(x => x.Station).ToArray();
-        }
-
-        [SupressImportIntoVM]
-        private double[] _GetEquationStations()
-        {
-            return _alignment.GetStations(AeccStationType.aeccEquation, this.Start, this.End).Cast<AeccAlignmentStation>().Select(x => x.Station).ToArray();
-        }
-
-        [SupressImportIntoVM]
-        private double[] _GetStationsAhead()
-        {
-            return _alignment.StationEquations.Cast<AeccStationEquation>().Select(x => x.StationAhead).ToArray();
-        }
+        public double End => _alignment.EndingStation;        
 
 
         /// <summary>
@@ -111,7 +92,7 @@ namespace CivilConnection
         /// The GeometryStations.
         /// </value>
         /// 
-        public double[] GeometryStations { get { return _GetGeometryStations(); } }
+        public double[] GeometryStations => _data.GeometryStations?.ToArray() ?? []; 
 
         /// <summary>
         /// Gets the stations of the points of intersection.
@@ -120,7 +101,7 @@ namespace CivilConnection
         /// The PIStations.
         /// </value>
         /// 
-        public double[] PIStations { get { return _GetPIStations(); } }
+        public double[] PIStations => _data.PIStations?.ToArray() ?? [];
 
         /// <summary>
         /// Gets the stations of the points of superelevation transition.
@@ -129,7 +110,7 @@ namespace CivilConnection
         /// The SuperTransStations.
         /// </value>
         /// 
-        public double[] SuperTransStations { get { return _GetSuperTransStations(); } }
+        public double[] SuperTransStations => _data.SuperTransitionStations?.ToArray() ?? [];
 
         /// <summary>
         /// Gets the stations of the station equations
@@ -138,7 +119,7 @@ namespace CivilConnection
         /// The Eqaution Stations
         /// </value>
         /// 
-        public double[] EquationStations { get { return _GetEquationStations(); } }
+        public double[] EquationStations => _data.EquationStations?.ToArray() ?? [];
 
         /// <summary>
         /// Gets the station ahead based on station equations
@@ -146,9 +127,10 @@ namespace CivilConnection
         /// <value>
         /// The Station Ahead at each Station Equation
         /// </value>
-        public double[] StationAhead { get { return _GetStationsAhead(); } }
+        public double[] StationAhead => _data.StationAhead?.ToArray() ?? [];
 
         #endregion
+
 
         #region INTERNAL CONSTRUCTORS
         /// <summary>
@@ -157,16 +139,15 @@ namespace CivilConnection
         /// <value>
         /// The internal element.
         /// </value>
-        internal object InternalElement { get { return this._alignment; } }
+        internal AlignmentWrapper InternalElement => _alignment;
 
         /// <summary>
         /// Internal constructor.
         /// </summary>
         /// <param name="alignment">The internal AeccAlignment.</param>
-        internal Alignment(AeccAlignment alignment)
+        internal Alignment(AlignmentWrapper alignment)
         {
-            this._alignment = alignment;
-            this._entities = alignment.Entities;
+            _alignment = alignment;
         }
         #endregion
 
@@ -230,7 +211,7 @@ namespace CivilConnection
         /// <returns>The list of associated Profiles.</returns>
         public IList<Profile> GetProfiles()
         {
-            Utils.Log("Alignment.GetProfiles Started...");
+            Utils.LogMethodStart(this);
 
             IList<Profile> output = new List<Profile>();
 

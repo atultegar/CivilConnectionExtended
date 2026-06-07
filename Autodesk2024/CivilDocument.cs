@@ -22,8 +22,10 @@ using Autodesk.AutoCAD.Interop.Common;
 using Autodesk.DesignScript.Geometry;
 using Autodesk.DesignScript.Runtime;
 using CivilConnection.Contracts.Models;
+using CivilConnection.Converters;
 using CivilConnection.Interop.Context;
 using CivilConnection.Interop.Services;
+using CivilConnection.Interop.Wrappers;
 using Revit.Elements;
 using System;
 using System.Collections.Generic;
@@ -42,7 +44,7 @@ namespace CivilConnection
 
         internal readonly CivilContext _context;
 
-        internal readonly dynamic _document;
+        internal readonly DocumentWrapper _document;
 
         internal readonly CivilDocumentData _data;
 
@@ -54,7 +56,7 @@ namespace CivilConnection
 
         private readonly CorridorService _corridorService;
 
-        private readonly SurfaceService _surfaceService;
+        private readonly CivilSurfaceService _surfaceService;
 
         private readonly CommandService _commandService;
 
@@ -69,18 +71,15 @@ namespace CivilConnection
         /// </summary>
         /// <param name="context">The CivilContext that provides access to civil-specific services and settings for the document.</param>
         /// <param name="document">The underlying dynamic document object to be associated with this CivilDocument instance.</param>
-        /// <param name="data">The CivilDocumentData containing metadata and configuration for the document.</param>
-        internal CivilDocument(CivilContext context, dynamic document)
+        internal CivilDocument(DocumentWrapper document)
         {
-            _context = context;
-
             _document = document;
 
             _alignmentService = new AlignmentService();
 
             _corridorService = new CorridorService();
 
-            _surfaceService = new SurfaceService();
+            _surfaceService = new CivilSurfaceService();
 
             _commandService = new CommandService();
 
@@ -134,7 +133,7 @@ namespace CivilConnection
 
             var output = _alignmentService
                 .GetAlignments(_document)
-                .Select(x => new Alignment(_context, x))
+                .Select(x => new Alignment(x))
                 .ToList();
 
             Utils.Log("CivilDocument.GetAlignments completed.");
@@ -164,9 +163,12 @@ namespace CivilConnection
         {
             Utils.Log("CivilDocument.GetCorridors started...");
 
+            // Cast the lambda to a delegate to avoid CS1977 when the call becomes dynamically dispatched
+            var selector = (Func<dynamic, Corridor>)(x => new Corridor(x));
+
             var output = _corridorService
                 .GetCorridors(_document)
-                .Select(x => new Corridor(_context, x))
+                .Select(selector)
                 .ToList();
 
             Utils.Log("CivilDocument.GetCorridors completed.");
@@ -198,9 +200,12 @@ namespace CivilConnection
         {
             Utils.Log("CivilDocument.GetSurfaces started...");
 
+            // Cast the lambda to a delegate to avoid CS1977 when the call becomes dynamically dispatched
+            var selector = (Func<dynamic, CivilSurface>)(x => new CivilSurface(_context, x));
+
             var output = _surfaceService
                 .GetSurfaces(_document)
-                .Select(x => new CivilSurface(_context, x))
+                .Select(selector)
                 .ToList();
 
             Utils.Log("CivilDocument.GetSurfaces completed.");
@@ -231,13 +236,13 @@ namespace CivilConnection
         /// <returns></returns>
         public bool SendCommand(string command)
         {
-            Utils.Log("CivilDocument.SendCommand started...");
+            Utils.LogMethodStart(this);
 
             try
             {
                 _commandService.SendCommand(_document, command);
 
-                Utils.Log("CivilDocument.SendCommand completed.");
+                Utils.LogMethodEnd(this);
 
                 return true;
             }
@@ -260,8 +265,47 @@ namespace CivilConnection
         /// <returns></returns>
         public string AddLayer(string name)
         {
-            Utils.AddLayer(this._document, name);
-            return name;
+            Utils.LogMethodStart(this);
+
+            try
+            {
+                _geometryService.AddLayer(_document, name);
+
+                Utils.LogMethodEnd(this);
+
+                return name;
+            }
+            catch (Exception ex)
+            {
+                Utils.Log($"ERROR: {ex.Message}");
+
+                return $"ERROR: {ex.Message}";
+            }
+        }
+
+        /// <summary>
+        /// Add new layers to the Civil Document by names.
+        /// </summary>
+        /// <param name="names">Layer names</param>
+        /// <returns></returns>
+        public IList<string> AddLayers(IList<string> names)
+        {
+            Utils.LogMethodStart(this);
+
+            try
+            {
+                _geometryService.Addlayers(_document, names);
+
+                Utils.LogMethodEnd(this);
+
+                return names;
+            }
+            catch (Exception ex)
+            {
+                Utils.Log($"ERROR: {ex.Message}");
+
+                return null;
+            }
         }
 
         /// <summary>
@@ -272,18 +316,333 @@ namespace CivilConnection
         /// <returns>The identifier of the newly added point entity.</returns>
         public string AddDBPoint(Point point, string layer = "0")
         {
-            return Utils.AddDBPointByPoint(this._document, point, layer);
+            Utils.LogMethodStart(this);
+
+            var pointData = GeometryConverter.ToPointData(point);
+
+            var handle = _geometryService.AddDBPoint(_document, pointData, layer);
+
+            Utils.LogMethodEnd(this);
+
+            return handle;
         }
 
         /// <summary>
         /// Adds the DB Points.
         /// </summary>
         /// <param name="points"></param>
-        /// <param name="layer"></param>
+        /// <param name="layers"></param>
         /// <returns>Object Handles</returns>
         public List<string> AddDBPoints(List<Point> points, List<string> layers)
         {
-            return Utils.AddDBPointsByPoints(this._document, points, layers);
+            Utils.LogMethodStart(this);
+
+            var pointsData = points.Select(x => GeometryConverter.ToPointData(x)).ToList();
+
+            var handles = _geometryService.AddDBPoints(_document, pointsData, layers);
+
+            Utils.LogMethodEnd(this);
+
+            return handles;
+        }
+
+        /// <summary>
+        /// Adds the 3D polyline by curve.
+        /// </summary>
+        /// <param name="curve">The curve.</param>
+        /// <param name="layer">The layer.</param>
+        /// <returns></returns>
+        public string AddPolylineByCurve(Curve curve, string layer)
+        {
+            Utils.LogMethodStart(this);
+
+            var geometry = GeometryConverter.Convert(curve);
+
+            var handle = _geometryService.AddGeometry(_document, geometry, layer);
+
+            Utils.LogMethodEnd(this);
+
+            return handle;
+        }
+
+        /// <summary>
+        /// Adds the 3D polylines by curve.
+        /// </summary>
+        /// <param name="curves">The curves.</param>
+        /// <param name="layer">The layer.</param>
+        /// <returns></returns>
+        public string AddPolylineByCurves(IList<Curve> curves, string layer)
+        {
+            Utils.LogMethodStart(this);
+
+            var polylineData = GeometryConverter.ToPolylineData(curves);
+
+            var handle = _geometryService.AddPolyline(_document, polylineData, layer);
+
+            Utils.LogMethodEnd(this);
+
+            return handle;
+        }
+
+        /// <summary>
+        /// Adds the arc to the document.
+        /// </summary>
+        /// <param name="arc">The arc.</param>
+        /// <param name="layer">The layer.</param>
+        /// <returns></returns>
+        public string AddArc(Arc arc, string layer)
+        {
+            Utils.LogMethodStart(this);
+
+            var data = GeometryConverter.ToArcData(arc);
+
+            var handle = _geometryService.AddArc(_document, data, layer);
+
+            Utils.LogMethodEnd(this);
+
+            return handle;
+        }
+
+        /// <summary>
+        /// Adds the circle to the document.
+        /// </summary>
+        /// <param name="circle">The circle.</param>
+        /// <param name="layer">The layer.</param>
+        /// <returns></returns>
+        public string AddCircle(Circle circle, string layer)
+        {
+            Utils.LogMethodStart(this);
+
+            var circleData = GeometryConverter.ToCircleData(circle);
+
+            var handle = _geometryService.AddCircle(_document, circleData, layer);
+
+            Utils.LogMethodEnd(this);
+
+            return handle;
+        }
+
+        /// <summary>
+        /// Adds the 2D polyline by points.
+        /// </summary>
+        /// <param name="points">The points.</param>
+        /// <param name="layer">The layer.</param>
+        /// <returns></returns>
+        public string AddLWPolylineByPoints(IList<Point> points, string layer)
+        {
+            Utils.LogMethodStart(this);
+
+            var polylineData = GeometryConverter.ToPolylineData(points);
+
+            var handle = _geometryService.AddPolyline(_document, polylineData, layer);
+
+            Utils.LogMethodEnd(this);
+
+            return handle;
+        }
+
+        /// <summary>
+        /// Adds the region by closed profile.
+        /// </summary>
+        /// <param name="closedCurve">The closed curve.</param>
+        /// <param name="layer">The layer.</param>
+        /// <returns></returns>
+        public string AddRegionByPatch(Curve closedCurve, string layer)
+        {
+            Utils.LogMethodStart(this);
+
+            var curveData = GeometryConverter.ToPolylineData(closedCurve as PolyCurve);
+
+            var handle = _geometryService.AddRegion(_document, curveData, layer);
+
+            Utils.LogMethodEnd(this);
+
+            return handle;
+        }
+
+        /// <summary>
+        /// Creates a closed profile form the points and adds the extruded solid.
+        /// </summary>
+        /// <param name="points">The points.</param>
+        /// <param name="height">The height. By Default is equal to 1.</param>
+        /// <param name="layer">The layer.</param>
+        /// <returns></returns>
+        public string AddExtrudedSolidByPoints(IList<Point> points, double height = 1, string layer = "_CivilConnectionSolid")
+        {
+            Utils.LogMethodStart(this);
+
+            var curveData = GeometryConverter.ToPolylineData(points);
+
+            curveData.IsClosed = true;
+
+            var handle = _geometryService.ExtrudeCurve(_document, curveData, height, layer);
+
+            Utils.LogMethodEnd(this);
+
+            return handle;
+        }
+
+        /// <summary>
+        /// Adds the extruded solid by closed profile.
+        /// </summary>
+        /// <param name="closedCurve">The closed curve.</param>
+        /// <param name="height">The height. By Default is equal to 1.</param>
+        /// <param name="layer">The layer.</param>
+        /// <returns></returns>
+        public string AddExtrudedSolidByPatch(Curve closedCurve, double height = 1, string layer = "_CivilConnectionSolid")
+        {
+            Utils.LogMethodStart(this);
+
+            var curveData = GeometryConverter.ToPolylineData(closedCurve as PolyCurve);
+
+            curveData.IsClosed = true;
+
+            var handle = _geometryService.ExtrudeCurve(_document, curveData, height, layer);
+
+            Utils.LogMethodEnd(this);
+
+            return handle;
+        }
+
+        /// <summary>
+        /// Adds multiple extruded solid by closed curves.
+        /// </summary>
+        /// <param name="curves">The curves.</param>
+        /// <param name="height">The height. By Default is equal to 1.</param>
+        /// <param name="layer">The layer.</param>
+        /// <returns></returns>
+        public string AddExtrudedSolidByCurves(IList<Curve> curves, double height = 1, string layer = "_CivilConnectionSolid")
+        {
+            Utils.LogMethodStart(this);
+
+            var curveData = GeometryConverter.ToPolylineData(curves);
+
+            curveData.IsClosed = true;
+
+            var handle = _geometryService.ExtrudeCurve(_document, curveData, height, layer);
+
+            Utils.LogMethodEnd(this);
+
+            return handle;
+        }
+
+        /// <summary>
+        /// Creates a text in the CivilDocument and rotates it to match the plane.
+        /// </summary>
+        /// <param name="text">The text.</param>
+        /// <param name="point">The point.</param>
+        /// <param name="textHeight">Height of the text.</param>
+        /// <param name="layer">The layer.</param>
+        /// <param name="cs">The cs.</param>
+        /// <returns></returns>
+        public string AddText(string text, Point point, double textHeight, string layer, CoordinateSystem cs)
+        {
+            Utils.LogMethodStart(this);
+
+            var pointData = GeometryConverter.ToPointData(point);
+
+            var handle = _geometryService.AddText(_document, text, pointData, textHeight, layer);
+
+            Utils.LogMethodEnd(this);
+
+            return handle;
+        }
+
+        /// <summary>
+        /// Creates an extrusion based on a closed curve (Polycurve, Polygon or Rectangle) profile to be used to cut the solids in the Civil Document.
+        /// </summary>
+        /// <param name="closedCurve">The closed curve.</param>
+        /// <param name="height">The height. By Default is equal to 1.</param>
+        /// <param name="layer">The layer.</param>
+        /// <returns></returns>
+        public bool CutSolidsByPatch(Curve closedCurve, double height = 1, string layer = "_CivilConnectionSolid")
+        {
+            Utils.LogMethodStart(this);
+
+            var curveData = GeometryConverter.ToPolylineData(closedCurve as PolyCurve);
+
+            curveData.IsClosed = true;
+
+            var handle = _geometryService.CutSolidByPatch(_document, curveData, height, layer);
+
+            Utils.LogMethodEnd(this);
+
+            return handle;
+        }
+
+        /// <summary>
+        /// Creates an extrusion based on a profile defined by a set of curves profile to be used to cut the solids in the Civil Document.
+        /// </summary>
+        /// <param name="closedCurves">The closed curves.</param>
+        /// <param name="height">The height. By Default is equal to 1.</param>
+        /// <param name="layer">The layer.</param>
+        /// <returns></returns>
+        public bool CutSolidsByCurves(IList<Curve> closedCurves, double height = 1, string layer = "_CivilConnectionSolid")
+        {
+            Utils.LogMethodStart(this);
+
+            var curveData = GeometryConverter.ToPolylineData(closedCurves as PolyCurve);
+
+            curveData.IsClosed = true;
+
+            var handle = _geometryService.CutSolidByPatch(_document, curveData, height, layer);
+
+            Utils.LogMethodEnd(this);
+
+            return handle;
+        }
+
+        /// <summary>
+        /// Creates a solid to be used to cut the solids in the Civil 3D Document.
+        /// </summary>
+        /// <param name="geometry">The solid geometry.</param>
+        /// <param name="layer">The layer where to crerate the cutting solid.</param>
+        /// <returns></returns>
+        public bool CutSolidsByGeometry(Geometry[] geometry, string layer)
+        {
+
+            Utils.LogMethodStart(this);
+
+            // #TODO
+
+            Utils.LogMethodEnd(this);
+
+            return false;
+        }
+
+        /// <summary>
+        /// Import the geometry from Dynamo into the Civil 3D Document.
+        /// </summary>
+        /// <param name="geometry">The geometry.</param>
+        /// <param name="layer">The layer where to crerate the solid.</param>
+        /// <returns></returns>
+        public IList<string> ImportGeometry(Geometry[] geometry, string layer)
+        {
+            return Utils.ImportGeometry(this._document, geometry, layer);
+        }
+
+        /// <summary>
+        /// Links the geometry associated to a Revit object into Civil 3D.
+        /// </summary>
+        /// <param name="element">The element.</param>
+        /// <param name="parameter">The parameter.</param>
+        /// <param name="layer">The layer.</param>
+        /// <returns></returns>
+        public string LinkElement(Revit.Elements.Element element, string parameter, string layer)
+        {
+            return Utils.ImportElement(this._document, element, parameter, layer);
+        }
+
+
+
+        /// <summary>
+        /// Slices the solids in Civil 3D using a Dynamo Plane.
+        /// </summary>
+        /// <param name="plane">The plane.</param>
+        /// <returns></returns>
+        public bool SliceSolidsByPlane(Plane plane)
+        {
+            return Utils.SliceSolidsByPlane(this._document, plane);
         }
 
         #endregion
@@ -402,198 +761,12 @@ namespace CivilConnection
         #region PUBLIC METHODS
         
 
-        
-
-        
-
         #region AUTOCAD METHODS
-        /// <summary>
-        /// Adds the arc to the document.
-        /// </summary>
-        /// <param name="arc">The arc.</param>
-        /// <param name="layer">The layer.</param>
-        /// <returns></returns>
-        public string AddArc(Arc arc, string layer)
-        {
-            return Utils.AddArcByArc(this._document, arc, layer);
-        }
-
-        /// <summary>
-        /// Adds the circle to the document.
-        /// </summary>
-        /// <param name="circle">The circle.</param>
-        /// <param name="layer">The layer.</param>
-        /// <returns></returns>
-        public string AddCircle(Circle circle, string layer)
-        {
-            return Utils.AddCircleByCircle(this._document, circle, layer);
-        }
-
-        /// <summary>
-        /// Adds the 2D polyline by points.
-        /// </summary>
-        /// <param name="points">The points.</param>
-        /// <param name="layer">The layer.</param>
-        /// <returns></returns>
-        public string AddLWPolylineByPoints(IList<Point> points, string layer)
-        {
-            return Utils.AddLWPolylineByPoints(this._document, points, layer);
-        }
-
-        /// <summary>
-        /// Adds the 3D polyline by curve.
-        /// </summary>
-        /// <param name="curve">The curve.</param>
-        /// <param name="layer">The layer.</param>
-        /// <returns></returns>
-        public string AddPolylineByCurve(Curve curve, string layer)
-        {
-            return Utils.AddPolylineByCurve(this._document, curve, layer);
-        }
-
-        /// <summary>
-        /// Adds the 3D polylines by curve.
-        /// </summary>
-        /// <param name="curves">The curves.</param>
-        /// <param name="layer">The layer.</param>
-        /// <returns></returns>
-        public string AddPolylineByCurve(IList<Curve> curves, string layer)
-        {
-            return Utils.AddPolylineByCurves(this._document, curves, layer);
-        }
-
-        /// <summary>
-        /// Adds the region by closed profile.
-        /// </summary>
-        /// <param name="closedCurve">The closed curve.</param>
-        /// <param name="layer">The layer.</param>
-        /// <returns></returns>
-        public string AddRegionByPatch(Curve closedCurve, string layer)
-        {
-            return Utils.AddRegionByPatch(this._document, closedCurve, layer);
-        }
-
-        /// <summary>
-        /// Creates a closed profile form the points and adds the extruded solid.
-        /// </summary>
-        /// <param name="points">The points.</param>
-        /// <param name="height">The height. By Default is equal to 1.</param>
-        /// <param name="layer">The layer.</param>
-        /// <returns></returns>
-        public string AddExtrudedSolidByPoints(IList<Point> points, double height = 1, string layer = "_CivilConnectionSolid")
-        {
-            return Utils.AddExtrudedSolidByPoints(this._document, points, height, layer);
-        }
-
-        /// <summary>
-        /// Adds the extruded solid by closed profile.
-        /// </summary>
-        /// <param name="closedCurve">The closed curve.</param>
-        /// <param name="height">The height. By Default is equal to 1.</param>
-        /// <param name="layer">The layer.</param>
-        /// <returns></returns>
-        public string AddExtrudedSolidByPatch(Curve closedCurve, double height = 1, string layer = "_CivilConnectionSolid")
-        {
-            return Utils.AddExtrudedSolidByPatch(this._document, closedCurve, height, layer);
-        }
-
-        /// <summary>
-        /// Adds multiple extruded solid by closed curves.
-        /// </summary>
-        /// <param name="curves">The curves.</param>
-        /// <param name="height">The height. By Default is equal to 1.</param>
-        /// <param name="layer">The layer.</param>
-        /// <returns></returns>
-        public string AddExtrudedSolidByCurves(IList<Curve> curves, double height = 1, string layer = "_CivilConnectionSolid")
-        {
-            return Utils.AddExtrudedSolidByCurves(this._document, curves, height, layer);
-        }
+        
 
         
 
-        /// <summary>
-        /// Creates a text in the CivilDocument and rotates it to match the plane.
-        /// </summary>
-        /// <param name="text">The text.</param>
-        /// <param name="point">The point.</param>
-        /// <param name="textHeight">Height of the text.</param>
-        /// <param name="layer">The layer.</param>
-        /// <param name="cs">The cs.</param>
-        /// <returns></returns>
-        public string AddText(string text, Point point, double textHeight, string layer, CoordinateSystem cs)
-        {
-            return Utils.AddText(this._document, text, point, textHeight, layer, cs);
-        }
-
-        /// <summary>
-        /// Creates an extrusion based on a closed curve (Polycurve, Polygon or Rectangle) profile to be used to cut the solids in the Civil Document.
-        /// </summary>
-        /// <param name="closedCurve">The closed curve.</param>
-        /// <param name="height">The height. By Default is equal to 1.</param>
-        /// <param name="layer">The layer.</param>
-        /// <returns></returns>
-        public bool CutSolidsByPatch(Curve closedCurve, double height = 1, string layer = "_CivilConnectionSolid")
-        {
-            return Utils.CutSolidsByPatch(this._document, closedCurve, height, layer);
-        }
-
-        /// <summary>
-        /// Creates an extrusion based on a profile defined by a set of curves profile to be used to cut the solids in the Civil Document.
-        /// </summary>
-        /// <param name="closedCurves">The closed curves.</param>
-        /// <param name="height">The height. By Default is equal to 1.</param>
-        /// <param name="layer">The layer.</param>
-        /// <returns></returns>
-        public bool CutSolidsByCurves(IList<Curve> closedCurves, double height = 1, string layer = "_CivilConnectionSolid")
-        {
-            return Utils.CutSolidsByCurves(this._document, closedCurves, height, layer);
-        }
-
-        /// <summary>
-        /// Creates a solid to be used to cut the solids in the Civil 3D Document.
-        /// </summary>
-        /// <param name="geometry">The solid geometry.</param>
-        /// <param name="layer">The layer where to crerate the cutting solid.</param>
-        /// <returns></returns>
-        public bool CutSolidsByGeometry(Geometry[] geometry, string layer)
-        {
-            return Utils.CutSolidsByGeometry(this._document, geometry, layer);
-        }
-
-        /// <summary>
-        /// Import the geometry from Dynamo into the Civil 3D Document.
-        /// </summary>
-        /// <param name="geometry">The geometry.</param>
-        /// <param name="layer">The layer where to crerate the solid.</param>
-        /// <returns></returns>
-        public IList<string> ImportGeometry(Geometry[] geometry, string layer)
-        {
-            return Utils.ImportGeometry(this._document, geometry, layer);
-        }
-
-        /// <summary>
-        /// Links the geometry associated to a Revit object into Civil 3D.
-        /// </summary>
-        /// <param name="element">The element.</param>
-        /// <param name="parameter">The parameter.</param>
-        /// <param name="layer">The layer.</param>
-        /// <returns></returns>
-        public string LinkElement(Revit.Elements.Element element, string parameter, string layer)
-        {
-            return Utils.ImportElement(this._document, element, parameter, layer);
-        }
-
         
-
-        /// <summary>
-        /// Slices the solids in Civil 3D using a Dynamo Plane.
-        /// </summary>
-        /// <param name="plane">The plane.</param>
-        /// <returns></returns>
-        public bool SliceSolidsByPlane(Plane plane)
-        {
-            return Utils.SliceSolidsByPlane(this._document, plane);
-        }
 
         #endregion
 

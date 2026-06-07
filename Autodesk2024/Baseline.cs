@@ -1,37 +1,31 @@
-﻿// Copyright (c) 2016 Autodesk, Inc. All rights reserved.
-// Author: paolo.serra@autodesk.com
+﻿// Copyright (c) 2016 Autodesk, Inc.
+// Copyright (c) 2026 Atul Tegar
+//
+// Original Author: paolo.serra@autodesk.com
+// Maintained and extended by: atul.tegar@gmail.com
 // 
 // Licensed under the Apache License, Version 2.0 (the "License").
 // You may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
+//
 //    http://www.apache.org/licenses/LICENSE-2.0
 // 
-//  Unless required by applicable law or agreed to in writing, software
+// Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
-// implied.  See the License for the specific language governing
-// permissions and limitations under the License.
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+using Autodesk.DesignScript.Geometry;
+using Autodesk.DesignScript.Runtime;
+using CivilConnection.Contracts.Models.Civil;
+using CivilConnection.Converters;
+using CivilConnection.Interop.Services;
+using CivilConnection.Interop.Wrappers;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-using System.Runtime;
-using System.Runtime.InteropServices;
-
-using Autodesk.AutoCAD.Interop;
-using Autodesk.AutoCAD.Interop.Common;
-using Autodesk.AECC.Interop.UiRoadway;
-using Autodesk.AECC.Interop.Roadway;
-using Autodesk.AECC.Interop.Land;
-using System.Reflection;
-
-using Autodesk.DesignScript.Runtime;
-using Autodesk.DesignScript.Geometry;
-using System.Xml;
 using System.IO;
-using Autodesk.AECC.Interop.UiLand;
+using System.Linq;
 
 namespace CivilConnection
 {
@@ -41,8 +35,21 @@ namespace CivilConnection
     /// </summary>
     public class Baseline
     {
+        #region INTERNAL
+
+        internal readonly BaselineWrapper _baseline;
+
+        #endregion
+
+        #region SERVICES
+
+        private readonly LandXmlService _landXmlService;
+        private readonly BaselineService _baselineService;
+
+        #endregion
+
         #region PRIVATE PROPERTIES
-        internal AeccBaseline _baseline;
+
         private double _start;
         private double _end;
         private double[] _stations;
@@ -59,28 +66,28 @@ namespace CivilConnection
         /// <value>
         /// The alignment.
         /// </value>
-        public Alignment Alignment { get { return new Alignment(_baseline.Alignment); } }
+        public Alignment Alignment => new Alignment(_baseline.Alignment);
         /// <summary>
         /// Gets the start station.
         /// </summary>
         /// <value>
         /// The start.
         /// </value>
-        public double Start { get { return _start; } }
+        public double Start => _baseline.StartStation;
         /// <summary>
         /// Gets the end station.
         /// </summary>
         /// <value>
         /// The end.
         /// </value>
-        public double End { get { return _end; } }
+        public double End => _baseline.EndStation;
         /// <summary>
         /// Gets the stations.
         /// </summary>
         /// <value>
         /// The stations.
         /// </value>
-        public double[] Stations { get { return _stations; } }
+        public double[] Stations => _baseline.Stations.ToArray();
         /// <summary>
         /// Gets the geometry representation of the Baseline.
         /// </summary>
@@ -94,14 +101,14 @@ namespace CivilConnection
         /// <value>
         /// The name of the Corridor.
         /// </value>
-        public string CorridorName { get { return this._baseline.Corridor.DisplayName; } }
+        public string CorridorName => _baseline.Corridor.DisplayName;
         /// <summary>
         /// Gets the internal element.
         /// </summary>
         /// <value>
         /// The internal element.
         /// </value>
-        internal object InternalElement { get { return this._baseline; } }
+        internal BaselineWrapper InternalElement => _baseline;
         /// <summary>
         /// Gets the index of the Baseline in the Corridor
         /// </summary>
@@ -121,49 +128,299 @@ namespace CivilConnection
         /// <summary>
         /// Internal constructor
         /// </summary>
-        internal Baseline(AeccBaseline baseline, int index, Corridor corridor)
+        internal Baseline(BaselineWrapper baseline, int index, Corridor corridor)
         {
-            this._baseline = baseline;
-            this._start = baseline.StartStation;
-            this._end = baseline.EndStation;
-            this._corridor = corridor;
+            _baseline = baseline;
+            _start = baseline.StartStation;
+            _end = baseline.EndStation;
+            _corridor = corridor;
 
-            IList<double> stations = new List<double>();
+            _stations = baseline.Stations.ToArray();
+            _index = index;
+            _baselineRegions = baseline.BaselineRegions.Select(x => new BaselineRegion(this, x, index)).ToList();
+            _landXmlService = new LandXmlService();
+            _baselineService = new BaselineService();
+        }
 
-            foreach (double s in baseline.GetSortedStations())
+        #endregion
+               
+
+        #region PUBLIC METHODS
+
+        /// <summary>
+        /// Returns the list of BaselineRegions in the Baseline.
+        /// </summary>
+        /// <returns>A list of BaselineRegions.</returns>
+        public IList<BaselineRegion> GetBaselineRegions()
+        {
+            return this._baselineRegions;
+        }
+
+        /// <summary>
+        /// Returns the index of the BaselineRegion in the Baseline that contains the station value.
+        /// </summary>
+        /// <param name="station">A double that represents a station along the corridor.</param>
+        /// <returns>An integer for the BaselineRegion that contains the station value.</returns>
+        /// <remarks>If the station input is less than the first station it returns 0. If the station input is greater than the last station it returns the number of BaselineRegions - 1.</remarks>
+        public int GetBaselineRegionIndexByStation(double station)
+        {
+            Utils.LogMethodStart(this);
+
+            int output = 0;
+            int res = -1;
+
+            foreach (var region in this._baseline.BaselineRegions)
             {
-                if (!stations.Contains(Math.Round(s, 3)))
+                if (region.StartStation <= station && region.EndStation >= station)
                 {
-                    stations.Add(s);
+                    res = output;
+                    break;
                 }
+               
+                output += 1;
             }
 
-            this._stations = stations.ToArray();
-            this._index = index;
-
-            // 20190524 - Start
-            IList<BaselineRegion> output = new List<BaselineRegion>();
-
-            int i = 0;
-
-            foreach (AeccBaselineRegion blr in this._baseline.BaselineRegions)
+            if (res == -1)
             {
-                // Can return Unspecified Error when the regions are not generated
-                try
-                {
-                    output.Add(new BaselineRegion(this, blr, i));
-                }
-                catch (Exception ex)
-                {
-                    Utils.Log(string.Format("ERROR: Baseline Regions: {0}", ex.Message));
-                    output.Add(null);
-                }
-
-                i += 1;
+                Utils.Log($"ERROR: The station is not compatible with the Baseline");
             }
 
-            this._baselineRegions = output;
-            // 20190524 - End
+            Utils.LogMethodEnd(this);
+
+            return res;
+        }
+
+        /// <summary>
+        /// Returns a point relative to the Baseline with station, offset and elevation.
+        /// </summary>
+        /// <param name="station">The distance measured along the Alignment.</param>
+        /// <param name="offset">The horizontal displacement from the Baseline measured at a given station.</param>
+        /// <param name="elevation">The vertical displacement from the Baseline measured at a given station.</param>
+        /// <returns>A Dynamo Point.</returns>
+        public Point PointByStationOffsetElevation(double station = 0, double offset = 0, double elevation = 0)
+        {
+            Utils.LogMethodStart(this);
+
+            var xyz = _baselineService.PointByStationOffsetElevation(_baseline, station, offset, elevation);
+
+            var p = GeometryConverter.ToProtoPoint(xyz);
+
+            Utils.LogMethodEnd(this);
+
+            return p;
+        }
+
+        /// <summary>
+        /// Returns the Baseline CoordinateSystem at a station value.
+        /// </summary>
+        /// <param name="station">The input station.</param>
+        /// <returns></returns>
+        /// <remarks>if the station falls outside of the corridor it returns the Identity Coordinate System.</remarks>
+        public CoordinateSystem CoordinateSystemByStation(double station = 0)
+        {
+            Utils.LogMethodStart(this);
+
+            CoordinateSystem cs = null;
+
+            if (station >= Start && station <= End)
+            {
+                var xyz = _baselineService.GetDirectionAtStation(_baseline, station);
+
+                Vector y = Vector.ByCoordinates(xyz.X, xyz.Y, xyz.Z);
+
+                Vector x = y.Cross(Vector.ZAxis());
+
+                Point origin = PointByStationOffsetElevation(station, 0, 0);
+
+                cs = CoordinateSystem.ByOriginVectors(origin, x, y, Vector.ZAxis());
+
+                y.Dispose();
+                x.Dispose();
+                origin.Dispose();
+            }
+            else
+            {
+                var message = "The Station value is not compatible with the Baseline.";
+
+                Utils.Log($"ERROR: {message}");
+
+                // throw new Exception(message);
+                return null;
+            }
+
+            if (cs == null)
+            {
+                Utils.Log($"ERROR: CoordinateSystem is null.");
+            }
+
+            Utils.LogMethodEnd(this);
+
+            return cs;
+        }
+
+        /// <summary>
+        /// Returns the closest Baseline CoordinateSystem and uses the point as new origin.
+        /// </summary>
+        /// <param name="point">The input Point.</param>
+        /// <returns>The CoordinateSystem.</returns>
+        /// <remarks>if the station falls outside of the corridor it returns the Identity Coordinate System.</remarks>
+        public CoordinateSystem GetCoordinateSystemByPoint(Point point)
+        {
+            Utils.LogMethodEnd(this);
+           
+            var soe = Alignment.InternalElement.GetStationOffset(point.X, point.Y);
+
+            var cs = CoordinateSystemByStation(soe.Station);
+
+            cs = CoordinateSystem.ByOriginVectors(point, cs.XAxis, cs.YAxis, cs.ZAxis);
+
+            Utils.LogMethodEnd(this);
+
+            return cs;
+        }
+
+        /// <summary>
+        /// Returns the station, offset, elevation of the point with respect to the Baseline.
+        /// </summary>
+        /// <param name="point">The input Point.</param>
+        /// <returns>A double[].</returns>
+        [MultiReturn(new string[] { "Station", "Offset", "Elevation" })]
+        public Dictionary<string, object> GetStationOffsetElevationByPoint(Point point)
+        {
+            Utils.LogMethodStart(this);
+                        
+            var soeData = Alignment.InternalElement.GetStationOffset(point.X, point.Y);
+
+            double station = soeData.Station;
+            double offset = soeData.Offset;
+
+            double elevation = point.Z - PointByStationOffsetElevation(station, offset, 0).Z;
+
+            Utils.LogMethodEnd(this);
+
+            return new Dictionary<string, object> { { "Station", station }, { "Offset", offset }, { "Elevation", elevation } };
+        }
+
+        /// <summary>
+        /// Gets the array station offset elevation by point.
+        /// </summary>
+        /// <param name="point">The point.</param>
+        /// <returns>A double[].</returns>
+        [IsVisibleInDynamoLibrary(false)]
+        public double[] GetArrayStationOffsetElevationByPoint(Point point)
+        {
+            Utils.Log($"Baseline.GetArrayStationOffsetElevationByPoint {point} started...");
+
+            var soeData = Alignment.InternalElement.GetStationOffset(point.X, point.Y);
+
+            double station = soeData.Station;
+            double offset = soeData.Offset;
+            double elevation = 0;
+
+            try
+            {
+                elevation = point.Z - _baseline.Profile.ElevationAt(station);
+            }
+            catch (Exception ex)
+            {
+                Utils.Log($"EXCEPTION: {ex.Message} {ex.StackTrace}");
+            }
+
+            Utils.LogMethodEnd(this);
+
+            return new double[] { station, offset, elevation };
+        }
+
+        /// <summary>
+        /// Returns Offset Alignments from the Baseline.
+        /// </summary>
+        /// <returns>The offset Alignments. Null if there are any.</returns>
+        public IList<Alignment> GetOffsetBaselinesAlignments()
+        {
+            Utils.LogMethodStart(this);
+
+            var wrappers = _baselineService.GetOffsetAlignments(_baseline);
+
+            var result = wrappers
+                .Select(x => new Alignment(x))
+                .ToList();
+
+            Utils.LogMethodEnd(this);
+
+            return result;
+        }
+
+        /// <summary>
+        /// Gets the featurelines by code and station
+        /// </summary>
+        /// <param name="code">the Featurelines code.</param>
+        /// <param name="station">the station used to select the featurelines.</param>
+        /// <returns></returns>
+        public IList<Featureline> GetFeaturelinesByCodeStation(string code, double station)  // 1.1.0
+        {
+            Utils.Log($"Baseline.GetFeaturelinesByCodeStation({code}, {station}) Started...");
+
+            var data = _baselineService.GetFeaturelinesAtStation(_baseline, code, station);
+
+            var result = new List<Featureline>();
+
+            foreach (var featurelineData in data)
+            {
+                var points = featurelineData.Points
+                    .Select(x => Point.ByCoordinates(x.X, x.Y, x.Z)).ToList();
+
+                points = Point.PruneDuplicates(points).ToList();
+
+                if (points.Count < 2)
+                    continue;
+
+                PolyCurve polyCurve = PolyCurve.ByPoints(points);
+
+                double offset = GetArrayStationOffsetElevationByPoint(polyCurve.StartPoint)[1];
+
+                var side = offset < 0
+                    ? Featureline.SideType.Left
+                    : Featureline.SideType.Right;
+
+                result.Add(
+                    new Featureline(
+                        this,
+                        polyCurve,
+                        code,
+                        side,
+                        featurelineData.RegionIndex));
+            }
+
+            Utils.LogMethodEnd(this);
+
+            return result;            
+        }
+                
+        /// <summary>
+        /// Gets the featurelines by code
+        /// </summary>
+        /// <param name="code"></param>
+        /// <returns></returns>
+        public IList<IList<Featureline>> GetFeaturelinesByCode(string code)
+        {
+            Utils.LogMethodStart(this);
+
+            var output = GetFeaturelinesFromXML(code);
+
+            Utils.LogMethodEnd(this);
+
+            return output;
+        }
+
+        /// <summary>
+        /// Public textual representation of the Dynamo node preview
+        /// </summary>
+        /// <returns>
+        /// A <see cref="System.String" /> that represents this instance.
+        /// </returns>
+        public override string ToString()
+        {
+            return $"Baseline(Start = {Math.Round(Start, 2).ToString()}, End = {Math.Round(End, 2).ToString()}";
         }
 
         #endregion
@@ -212,9 +469,9 @@ namespace CivilConnection
         /// <returns>The names of the offset Alignments, otherwise "None".</returns>
         private string GetOffsetAlignment()
         {
-            if (null != this._baseline.MainBaselineFeatureLines.OffsetAlignment)
+            if (null != _baseline.OffsetAlignment)
             {
-                return this._baseline.MainBaselineFeatureLines.OffsetAlignment.DisplayName;
+                return _baseline.OffsetAlignment.DisplayName;
             }
             else
             {
@@ -229,19 +486,7 @@ namespace CivilConnection
         /// <returns></returns>
         private IList<IList<Featureline>> GetFeaturelinesFromXML(string code)
         {
-            Utils.Log(string.Format("Baseline.GetFeaturelinesFromXML started ({0})...", code));
-
-            IList<IList<Featureline>> blFeaturelines = new List<IList<Featureline>>();
-            PolyCurve pc = null;
-            double side = 0;
-            int ri = -1;
-            Point lastPoint = null;
-            Point pt = null;
-
-            IList<Geometry> todel = new List<Geometry>();
-
-            todel.Add(lastPoint);
-            todel.Add(pt);
+            Utils.Log($"Baseline.GetFeaturelinesFromXML started ({code})...");
 
             string nullXmlPath = Path.Combine(Environment.GetEnvironmentVariable("TMP", EnvironmentVariableTarget.User), string.Format("CorridorFeatureLines.xml", ""));
 
@@ -259,9 +504,9 @@ namespace CivilConnection
                     return null;
                 }
 
-                var doc = this._baseline.Alignment.Document as AeccDocument;
+                var doc = _baseline.Alignment.Document;
 
-                doc.SendCommand(string.Format("-ExportCorridorFeatureLinesToXml\n{0}\n", this._baseline.Corridor.Handle));
+                doc.SendCommand(string.Format("-ExportCorridorFeatureLinesToXml\n{0}\n", _baseline.Corridor.Handle));
 
                 DateTime start = DateTime.Now;
 
@@ -293,10 +538,10 @@ namespace CivilConnection
                     }
                 }
 
-                this._corridor._corridorFeaturelinesXMLExported = true;
+                _corridor._corridorFeaturelinesXMLExported = true;
             }
 
-            if (this._corridor._corridorFeaturelinesXMLExported)
+            if (_corridor._corridorFeaturelinesXMLExported)
             {
                 if (File.Exists(nullXmlPath))
                 {
@@ -313,747 +558,103 @@ namespace CivilConnection
 
             if (File.Exists(xmlPath) || File.Exists(nullXmlPath))
             {
-                IList<Featureline> output = new List<Featureline>();
-
-                XmlDocument xmlDoc = new XmlDocument();
                 if (nullCorridor)
                 {
-                    xmlDoc.Load(nullXmlPath);
-                }
-                else
-                {
-                    xmlDoc.Load(xmlPath);
+                    xmlPath = nullXmlPath;
                 }
 
-                foreach (XmlElement be in xmlDoc.GetElementsByTagName("Baseline")
-                    .Cast<XmlElement>()
-                    .Where(x => Convert.ToInt32(x.Attributes["Index"].Value, System.Globalization.CultureInfo.InvariantCulture) == this.Index && x.ParentNode.ParentNode.Attributes["Name"].Value == this.CorridorName))
-                {
-                    try
-                    {
-                        foreach (XmlElement fe in be.GetElementsByTagName("FeatureLine").Cast<XmlElement>().Where(x => x.Attributes["Code"].Value == code))
-                        {
-                            IList<Point> points = new List<Point>();
+                var data = _landXmlService.ReadFeaturelines(xmlPath, CorridorName, Index, code);
 
-                            try
-                            {
-                                double isBreak = 0;
-                                int lastRi = -1;
+                var output = CreateFeaturelines(data, code);
 
-                                foreach (XmlElement p in fe.GetElementsByTagName("Point").Cast<XmlElement>().OrderBy(e => Convert.ToDouble(e.Attributes["Station"].Value, System.Globalization.CultureInfo.InvariantCulture)))
-                                {
-                                    try
-                                    {
-                                        double x = 0;
-                                        double y = 0;
-                                        double z = 0;
-                                        double b = 0;
-
-                                        double station = Convert.ToDouble(p.Attributes["Station"].Value, System.Globalization.CultureInfo.InvariantCulture);
-
-                                        try
-                                        {
-                                            x = Convert.ToDouble(p.Attributes["X"].Value, System.Globalization.CultureInfo.InvariantCulture);
-                                        }
-                                        catch (Exception ex)
-                                        {
-                                            Utils.Log(string.Format("ERROR: {0} X {1}", station, ex.Message));
-                                        }
-
-                                        try
-                                        {
-                                            y = Convert.ToDouble(p.Attributes["Y"].Value, System.Globalization.CultureInfo.InvariantCulture);
-                                        }
-                                        catch (Exception ex)
-                                        {
-                                            Utils.Log(string.Format("ERROR: {0} Y {1}", station, ex.Message));
-                                        }
-
-                                        try
-                                        {
-                                            z = Convert.ToDouble(p.Attributes["Z"].Value, System.Globalization.CultureInfo.InvariantCulture);  // if Z is NaN because there is no profile associated in that station
-                                        }
-                                        catch (Exception ex)
-                                        {
-                                            Utils.Log(string.Format("ERROR: {0} Z {1}", station, ex.Message));
-                                        }
-
-                                        try
-                                        {
-                                            b = Convert.ToDouble(p.Attributes["IsBreak"].Value, System.Globalization.CultureInfo.InvariantCulture);
-                                        }
-                                        catch (Exception ex)
-                                        {
-                                            Utils.Log(string.Format("ERROR: {0} IsBreak {1}", station, ex.Message));
-                                        }
-
-                                        try
-                                        {
-                                            ri = Convert.ToInt32(p.Attributes["RegionIndex"].Value, System.Globalization.CultureInfo.InvariantCulture);
-                                        }
-                                        catch (Exception ex)
-                                        {
-                                            Utils.Log(string.Format("ERROR: {0} RegionIndex {1}", station, ex.Message));
-                                        }
-
-                                        isBreak += b;
-
-                                        // 20200621 - START
-
-                                        var flpt = Point.ByCoordinates(x, y, z);  // 20201217 - START
-
-                                        points.Add(flpt);
-
-                                        if (isBreak > 0)
-                                        {
-                                            Utils.Log(string.Format("Point isBreak: {0}", b));
-                                            points = Point.PruneDuplicates(points).ToList();
-                                            if (points.Count < 2)
-                                            {
-                                                Utils.Log(string.Format("ERROR: Baseline.GetFeaturelinesFromXML not enough points", ""));
-                                                isBreak = 0;
-                                            }
-                                            else
-                                            {
-                                                pc = PolyCurve.ByPoints(points);
-                                                try
-                                                {
-                                                    side = Convert.ToDouble(fe.Attributes["Side"].Value, System.Globalization.CultureInfo.InvariantCulture);
-                                                }
-                                                catch (Exception ex)
-                                                {
-                                                    Utils.Log(string.Format("ERROR: Baseline.GetFeaturelinesFromXML Side {0}", ex.Message));
-                                                    side = 1;
-                                                }
-                                                output.Add(new Featureline(this, pc, code, side < 0 ? Featureline.SideType.Left : Featureline.SideType.Right, ri));
-
-                                                foreach (var pnt in points)
-                                                {
-                                                    if (pnt != null)
-                                                    {
-                                                        pnt.Dispose();
-                                                    }
-                                                }
-
-                                                points.Clear();
-                                                isBreak = 0;
-                                            }
-                                        }
-
-                                        if (ri != lastRi && lastRi > -1)
-                                        {
-                                            Utils.Log(string.Format("Region change {0}", ri));
-
-                                            int count = points.Count - 1;
-
-                                            var pts = points.Take(count).ToList();
-
-                                            pts = Point.PruneDuplicates(pts).ToList();
-
-                                            if (pts.Count < 2)
-                                            {
-                                                Utils.Log(string.Format("ERROR: Baseline.GetFeaturelinesFromXML not enough points", ""));
-                                            }
-                                            else
-                                            {
-                                                pc = PolyCurve.ByPoints(pts);
-                                                try
-                                                {
-                                                    side = Convert.ToDouble(fe.Attributes["Side"].Value, System.Globalization.CultureInfo.InvariantCulture);
-                                                }
-                                                catch (Exception ex)
-                                                {
-                                                    Utils.Log(string.Format("ERROR: Baseline.GetFeaturelinesFromXML Side {0}", ex.Message));
-                                                    side = 1;
-                                                }
-
-                                                output.Add(new Featureline(this, pc, code, side < 0 ? Featureline.SideType.Left : Featureline.SideType.Right, lastRi));
-
-                                                points = points.Skip(count).ToList();
-
-                                                foreach (var pnt in pts)
-                                                {
-                                                    if (pnt != null)
-                                                    {
-                                                        pnt.Dispose();
-                                                    }
-                                                }
-
-                                                pts.Clear();
-                                            }
-                                        }
-
-                                        lastRi = ri;
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        Utils.Log(string.Format("ERROR: Baseline.GetFeaturelinesFromXML point failed {0} {1}", Convert.ToDouble(p.Attributes["Station"].Value, System.Globalization.CultureInfo.InvariantCulture), ex.Message));
-                                    }
-                                }
-
-                                if (isBreak == 0 && points.Count > 0)
-                                {
-                                    Utils.Log(string.Format("Last points: {0}", points.Count));
-                                    points = Point.PruneDuplicates(points).ToList();
-                                    if (points.Count < 2)
-                                    {
-                                        Utils.Log(string.Format("ERROR: Baseline.GetFeaturelinesFromXML not enough points", ""));
-                                        isBreak = 0;
-                                    }
-                                    else
-                                    {
-                                        pc = PolyCurve.ByPoints(points);
-                                        try
-                                        {
-                                            side = Convert.ToDouble(fe.Attributes["Side"].Value, System.Globalization.CultureInfo.InvariantCulture);
-                                        }
-                                        catch (Exception ex)
-                                        {
-                                            Utils.Log(string.Format("Baseline.GetFeaturelinesFromXML Side set to Right {0}" , ex.Message));
-                                            side = 1;
-                                        }
-                                        output.Add(new Featureline(this, pc, code, side < 0 ? Featureline.SideType.Left : Featureline.SideType.Right, ri));
-
-                                        foreach (var p in points)
-                                        {
-                                            if (p != null)
-                                            {
-                                                p.Dispose();
-                                            }
-                                        }
-
-                                        points.Clear();
-                                        isBreak = 0;
-                                    }
-                                }
-
-                                // 20200621 - END
-                            }
-                            catch (Exception ex)
-                            {
-                                Utils.Log(string.Format("ERROR: Baseline.GetFeaturelinesFromXML Featureline failed {0}", ex.Message));
-                            }
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Utils.Log(string.Format("ERROR: Baseline.GetFeaturelinesFromXML failed {0}", ex.Message));
-                    }
-                }
-
-                blFeaturelines = output.OrderBy(f => f.BaselineRegionIndex).GroupBy(f => f.BaselineRegionIndex).Cast<IList<Featureline>>().ToList();
+                return output;
             }
             else
             {
                 Utils.Log("ERROR: Failed to locate CorridorFeatureLines.xml in the Temp folder.");
-            }
-
-            foreach (var item in todel)
-            {
-                if (item != null)
-                {
-                    item.Dispose();
-                }
-            }
-
-            Utils.Log(string.Format("Baseline.GetFeaturelinesFromXML completed.", ""));
-
-            return blFeaturelines;
-        }
-
-        #endregion
-
-        #region PUBLIC METHODS
-
-        /// <summary>
-        /// Returns the list of BaselineRegions in the Baseline.
-        /// </summary>
-        /// <returns>A list of BaselineRegions.</returns>
-        public IList<BaselineRegion> GetBaselineRegions()
-        {
-            return this._baselineRegions;
-        }
-
-        /// <summary>
-        /// Returns the index of the BaselineRegion in the Baseline that contains the station value.
-        /// </summary>
-        /// <param name="station">A double that represents a station along the corridor.</param>
-        /// <returns>An integer for the BaselineRegion that contains the station value.</returns>
-        /// <remarks>If the station input is less than the first station it returns 0. If the station input is greater than the last station it returns the number of BaselineRegions - 1.</remarks>
-        public int GetBaselineRegionIndexByStation(double station)
-        {
-            Utils.Log(string.Format("Baseline.GetBaselineRegionIndexByStation started...", ""));
-
-            int output = 0;
-            int res = -1;
-
-            foreach (AeccBaselineRegion region in this._baseline.BaselineRegions)
-            {
-                if (region.StartStation <= station && region.EndStation >= station)
-                {
-                    res = output;
-                    break;
-                }
-               
-                output += 1;
-            }
-
-            if (res == -1)
-            {
-                Utils.Log(string.Format("ERROR: The station is not compatible with the Baseline", ""));
-            }
-
-            Utils.Log(string.Format("Baseline.GetBaselineRegionIndexByStation completed.", ""));
-
-            return res;
-        }
-
-        /// <summary>
-        /// Returns a point relative to the Baseline with station, offset and elevation.
-        /// </summary>
-        /// <param name="station">The distance measured along the Alignment.</param>
-        /// <param name="offset">The horizontal displacement from the Baseline measured at a given station.</param>
-        /// <param name="elevation">The vertical displacement from the Baseline measured at a given station.</param>
-        /// <returns>A Dynamo Point.</returns>
-        public Point PointByStationOffsetElevation(double station = 0, double offset = 0, double elevation = 0)
-        {
-            Utils.Log(string.Format("Baseline.PointByStationOffsetElevation started...", ""));
-
-            Point p = null;
-
-            dynamic Xyz = this._baseline.StationOffsetElevationToXYZ(new double[] { station, offset, elevation });
-            p = Point.ByCoordinates(Xyz[0], Xyz[1], Xyz[2]);
-
-            Utils.Log(string.Format("Baseline.PointByStationOffsetElevation completed.", ""));
-
-            return p;
-        }
-
-        /// <summary>
-        /// Returns the Baseline CoordinateSystem at a station value.
-        /// </summary>
-        /// <param name="station">The input station.</param>
-        /// <returns></returns>
-        /// <remarks>if the station falls outside of the corridor it returns the Identity Coordinate System.</remarks>
-        public CoordinateSystem CoordinateSystemByStation(double station = 0)
-        {
-            Utils.Log(string.Format("Baseline.CoordinateSystemByStation started...", ""));
-
-            CoordinateSystem cs = null;
-
-            if (station >= this.Start && station <= this.End)
-            {
-                dynamic Xyz = this._baseline.GetDirectionAtStation(station);
-                Vector y = Vector.ByCoordinates(Xyz[0], Xyz[1], Xyz[2]);
-                Vector x = y.Cross(Vector.ZAxis());
-                Point origin = this.PointByStationOffsetElevation(station, 0, 0);
-                cs = CoordinateSystem.ByOriginVectors(origin, x, y, Vector.ZAxis());
-
-                y.Dispose();
-                x.Dispose();
-                origin.Dispose();
-            }
-            else
-            {
-                var message = "The Station value is not compatible with the Baseline.";
-
-                Utils.Log(string.Format("ERROR: {0}", message));
-
-                // throw new Exception(message);
                 return null;
             }
 
-            if (cs == null)
-            {
-                Utils.Log(string.Format("ERROR: CoordinateSystem is null.", ""));
-            }
-
-            Utils.Log(string.Format("Baseline.CoordinateSystemByStation completed.", ""));
-
-            return cs;
         }
 
-        /// <summary>
-        /// Returns the closest Baseline CoordinateSystem and uses the point as new origin.
-        /// </summary>
-        /// <param name="point">The input Point.</param>
-        /// <returns>The CoordinateSystem.</returns>
-        /// <remarks>if the station falls outside of the corridor it returns the Identity Coordinate System.</remarks>
-        public CoordinateSystem GetCoordinateSystemByPoint(Point point)
+        private IList<IList<Featureline>> CreateFeaturelines(IEnumerable<FeaturelineData> data, string code)
         {
-            Utils.Log(string.Format("Baseline.GetCoordinateSystemByPoint started...", ""));
+            var output = new List<Featureline>();
 
-            CoordinateSystem cs = CoordinateSystem.Identity();
-
-            AeccAlignment alignment = this.Alignment.InternalElement as AeccAlignment;
-
-            double station = 0;
-            double offset = 0;
-
-            alignment.StationOffset(point.X, point.Y, out station, out offset);
-
-            cs = this.CoordinateSystemByStation(station);
-
-            cs = CoordinateSystem.ByOriginVectors(point, cs.XAxis, cs.YAxis, cs.ZAxis);
-
-            Utils.Log(string.Format("Baseline.GetCoordinateSystemByPoint completed.", ""));
-
-            return cs;
-        }
-
-        /// <summary>
-        /// Returns the station, offset, elevation of the point with respect to the Baseline.
-        /// </summary>
-        /// <param name="point">The input Point.</param>
-        /// <returns>A double[].</returns>
-        [MultiReturn(new string[] { "Station", "Offset", "Elevation" })]
-        public Dictionary<string, object> GetStationOffsetElevationByPoint(Point point)
-        {
-            Utils.Log(string.Format("Baseline.GetStationOffsetElevationByPoint started...", ""));
-
-            AeccAlignment alignment = this.Alignment.InternalElement as AeccAlignment;
-
-            double station = 0;
-            double offset = 0;
-
-            alignment.StationOffset(point.X, point.Y, out station, out offset);
-
-            double elevation = point.Z - PointByStationOffsetElevation(station, offset, 0).Z;
-
-            Utils.Log(string.Format("Baseline.GetStationOffsetElevationByPoint completed.", ""));
-
-            return new Dictionary<string, object> { { "Station", station }, { "Offset", offset }, { "Elevation", elevation } };
-        }
-
-        /// <summary>
-        /// Gets the array station offset elevation by point.
-        /// </summary>
-        /// <param name="point">The point.</param>
-        /// <returns>A double[].</returns>
-        [IsVisibleInDynamoLibrary(false)]
-        public double[] GetArrayStationOffsetElevationByPoint(Point point)
-        {
-            Utils.Log(string.Format("Baseline.GetArrayStationOffsetElevationByPoint {0} started...", point));
-
-            AeccAlignment alignment = this.Alignment.InternalElement as AeccAlignment;
-
-            double station = 0;
-            double offset = 0;
-            double elevation = 0;
-
-            alignment.StationOffset(point.X, point.Y, out station, out offset);
-
-            try
+            foreach (var fl in data)
             {
-                elevation = point.Z - this._baseline.Profile.ElevationAt(station);
-            }
-            catch (Exception ex)
-            {
-                Utils.Log(string.Format("EXCEPTION: {0} {1}", ex.Message, ex.StackTrace));
-            }
+                var groups = SplitByBreaksAndRegions(fl.Points);
 
-            Utils.Log(string.Format("Baseline.GetArrayStationOffsetElevationByPoint completed.", ""));
-
-            return new double[] { station, offset, elevation };
-        }
-
-        /// <summary>
-        /// Returns Offset Alignments from the Baseline.
-        /// </summary>
-        /// <returns>The offset Alignments. Null if there are any.</returns>
-        public IList<Alignment> GetOffsetBaselinesAlignments()
-        {
-            Utils.Log(string.Format("Baseline.GetOffsetBaselinesAlignments started...", ""));
-
-            if (null != this._baseline.OffsetBaselineFeatureLinesCol)
-            {
-                IList<Alignment> offsetAlignments = new List<Alignment>();
-
-                foreach (AeccBaselineFeatureLines bfl in this._baseline.OffsetBaselineFeatureLinesCol)
+                foreach (var group in groups)
                 {
-                    if (!bfl.IsMainBaseline)
-                    {
-                        Alignment offset = new Alignment(bfl.OffsetAlignment);
-                        offsetAlignments.Add(offset);
-                    }
-                }
+                    if (group.Count < 2)
+                        continue;
 
-                Utils.Log(string.Format("Baseline.GetOffsetBaselinesAlignments completed.", ""));
+                    var points = group.Select(p => Point.ByCoordinates(p.X, p.Y, p.Z)).ToList();
 
-                return offsetAlignments;
-            }
+                    points = Point.PruneDuplicates(points).ToList();
 
-            Utils.Log(string.Format("WARNING: Baseline.GetOffsetBaselinesAlignments returned null.", ""));
+                    if (points.Count < 2)
+                        continue;
 
-            return null;
+                    PolyCurve polyCurve = PolyCurve.ByPoints(points);
 
-        }
-
-        /// <summary>
-        /// Gets the featurelines by code and station
-        /// </summary>
-        /// <param name="code">the Featurelines code.</param>
-        /// <param name="station">the station used to select the featurelines.</param>
-        /// <returns></returns>
-        public IList<Featureline> GetFeaturelinesByCodeStation(string code, double station)  // 1.1.0
-        {
-            Utils.Log(string.Format("Baseline.GetFeaturelinesByCodeStation({0}, {1}) Started...", code, station));
-
-            IList<Featureline> blFeaturelines = new List<Featureline>();
-
-            var b = this._baseline;
-
-            // 20190122 -- Start
-
-            AeccFeatureLines fs = null;
-
-            try
-            {
-                fs = b.MainBaselineFeatureLines.FeatureLinesCol.Item(code);
-            }
-            catch (Exception ex)
-            {
-                Utils.Log(string.Format("ERROR 1: {0}", ex.Message));
-            }
-
-            if (fs != null)
-            {
-                AeccBaselineRegion reg = null;
-
-                int regionIndex = 0;
-
-                foreach (AeccBaselineRegion region in b.BaselineRegions)
-                {
-                    if (region.StartStation < station && region.EndStation > station || Math.Abs(station - region.StartStation) < 0.001 || Math.Abs(station - region.EndStation) < 0.001)
-                    {
-                        reg = region;
-                        break;
-                    }
-
-                    ++regionIndex;
-                }
-
-                if (reg != null)
-                {
-                    foreach (var fl in fs.Cast<AeccFeatureLine>())
-                    {
-                        var pts = new List<Point>();
-
-                        foreach (var pt in fl.FeatureLinePoints.Cast<AeccFeatureLinePoint>())
-                        {
-                            if (reg.StartStation < Math.Round(pt.Station, 5) && reg.EndStation > Math.Round(pt.Station, 5)
-                                || Math.Abs(Math.Round(pt.Station, 5) - reg.StartStation) < 0.001
-                                || Math.Abs(Math.Round(pt.Station, 5) - reg.EndStation) < 0.001)
-                            {
-                                dynamic p = pt.XYZ;
-
-                                try
-                                {
-                                    pts.Add(Point.ByCoordinates(p[0], p[1], p[2]));
-                                }
-                                catch (Exception ex)
-                                {
-                                    Utils.Log(string.Format("ERROR 2: {0}", ex.Message));
-                                }
-                            }
-                        }
-
-                        var points = Point.PruneDuplicates(pts);
-
-                        if (points.Count() > 1)
-                        {
-                            PolyCurve pc = PolyCurve.ByPoints(points);
-
-                            double offset = this.GetArrayStationOffsetElevationByPoint(pc.StartPoint)[1];  // 1.1.0
-
-                            Featureline.SideType side = Featureline.SideType.Right;
-
-                            if (offset < 0)
-                            {
-                                side = Featureline.SideType.Left;
-                            }
-
-                            blFeaturelines.Add(new Featureline(this, pc, code, side, regionIndex));
-
-                            Utils.Log(string.Format("Featureline added", ""));
-                        }
-
-                        foreach (var pt in points)
-                        {
-                            pt.Dispose();
-                        }
-                    }
-                }
-                else
-                {
-                    Utils.Log(string.Format("ERROR: Region could not be found", ""));
-                }
-            }
-            else
-            {
-                Utils.Log(string.Format("ERROR: Featureline code is not valid", ""));
-            }
-
-            // 20190122 -- End
-
-            Utils.Log(string.Format("Baseline.GetFeaturelinesByCodeStation() Completed.", code));
-
-            return blFeaturelines;
-        }
-
-        /// <summary>
-        /// Gets the featurelines by code
-        /// </summary>
-        /// <param name="code">the Featurelines code.</param>
-        /// <returns></returns>
-        private IList<IList<Featureline>> GetFeaturelinesByCode_(string code)  // 1.1.0
-        {
-            Utils.Log(string.Format("Baseline.GetFeaturelinesByCode({0}) Started...", code));
-
-            IList<IList<Featureline>> blFeaturelines = new List<IList<Featureline>>();
-
-            var b = this._baseline;
-
-            // 20190121 -- Start
-
-            AeccFeatureLines fs = null;
-
-            try
-            {
-                fs = b.MainBaselineFeatureLines.FeatureLinesCol.Item(code);
-            }
-            catch (Exception ex)
-            {
-                Utils.Log(string.Format("ERROR: {0}", ex.Message));
-            }
-
-            Dictionary<int, Dictionary<double, Point>> cFLs = new Dictionary<int, Dictionary<double, Point>>();
-
-            int i = 0;
-
-            if (fs != null)
-            {
-                Utils.Log(string.Format("Featurelines in region: {0}", fs.Count));
-
-                foreach (var fl in fs.Cast<AeccFeatureLine>())
-                {
-                    Dictionary<double, Point> points = new Dictionary<double, Point>();
-
-                    foreach (var pt in fl.FeatureLinePoints.Cast<AeccFeatureLinePoint>())
-                    {
-                        dynamic p = pt.XYZ;
-
-                        try
-                        {
-                            points.Add(Math.Round(pt.Station, 5), Point.ByCoordinates(p[0], p[1], p[2]));
-                        }
-                        catch (Exception ex)
-                        {
-                            Utils.Log(string.Format("ERROR: {0}", ex.Message));
-                        }
-                    }
-
-                    cFLs.Add(i, points);
-
-                    ++i;
+                    output.Add(new Featureline(
+                        this,
+                        polyCurve,
+                        code,
+                        fl.Side < 0 ? Featureline.SideType.Left : Featureline.SideType.Right,
+                        group.First().RegionIndex));
                 }
             }
 
+            return output
+                .OrderBy(x => x.BaselineRegionIndex)
+                .GroupBy(x => x.BaselineRegionIndex)
+                .Select(g => (IList<Featureline>)g.ToList())
+                .ToList();
+        }
 
-            if (cFLs.Count > 0)
+        private static List<List<FeaturelinePointData>> SplitByBreaksAndRegions(IList<FeaturelinePointData> points)
+        {
+            var result = new List<List<FeaturelinePointData>>();
+
+            List<FeaturelinePointData> current = new List<FeaturelinePointData>();
+
+            int region = -1;
+
+            foreach (var point in points)
             {
-                int regionIndex = 0;
-
-                foreach (AeccBaselineRegion region in b.BaselineRegions)
+                if (region == -1)
                 {
-                    Utils.Log(string.Format("Processing region {0}...", regionIndex));
+                    region = point.RegionIndex;
+                }
 
-                    IList<Featureline> regFeaturelines = new List<Featureline>();
+                if (point.RegionIndex != region)
+                {
+                    result.Add(current);
 
-                    foreach (var k in cFLs.Keys)
-                    {
-                        IList<Point> points = new List<Point>();
+                    current = new List<FeaturelinePointData>();
 
-                        var pts = cFLs[k];
+                    region = point.RegionIndex;
+                }
 
-                        if (pts.Keys.Count == 0)
-                        {
-                            continue;
-                        }
+                current.Add(point);
 
-                        foreach (double s in region.GetSortedStations())
-                        {
-                            var st = Math.Round(s, 5);
+                if (point.IsBreak)
+                {
+                    result.Add(current);
 
-                            Point p = null;
-
-                            if (pts.TryGetValue(st, out p))
-                            {
-                                points.Add(p);
-                            }
-                        }
-
-                        points = Point.PruneDuplicates(points);
-
-                        if (points.Count > 1)
-                        {
-
-                            PolyCurve pc = PolyCurve.ByPoints(points);
-
-                            double offset = this.GetArrayStationOffsetElevationByPoint(pc.StartPoint)[1];  // 1.1.0
-
-                            Featureline.SideType side = Featureline.SideType.Right;
-
-                            if (offset < 0)
-                            {
-                                side = Featureline.SideType.Left;
-                            }
-
-                            regFeaturelines.Add(new Featureline(this, pc, code, side, regionIndex));
-
-                            Utils.Log(string.Format("Featureline added", ""));
-                        }
-
-                        foreach (var pt in points)
-                        {
-                            pt.Dispose();
-                        }
-                    }
-
-                    blFeaturelines.Add(regFeaturelines);
-
-                    Utils.Log(string.Format("Region {0} completed.", regionIndex));
-
-                    regionIndex++;
+                    current = new List<FeaturelinePointData>();
                 }
             }
 
-            // 20190121 -- End
+            if (current.Count > 0)
+            {
+                result.Add(current);
+            }
 
-            Utils.Log(string.Format("Baseline.GetFeaturelinesByCode() Completed.", code));
-
-            return blFeaturelines;
-        }
-
-        /// <summary>
-        /// Gets the featurelines by code
-        /// </summary>
-        /// <param name="code"></param>
-        /// <returns></returns>
-        public IList<IList<Featureline>> GetFeaturelinesByCode(string code)
-        {
-            return this.GetFeaturelinesFromXML(code);
-        }
-
-        /// <summary>
-        /// Public textual representation of the Dynamo node preview
-        /// </summary>
-        /// <returns>
-        /// A <see cref="System.String" /> that represents this instance.
-        /// </returns>
-        public override string ToString()
-        {
-            return string.Format("Baseline(Start = {0}, End = {1})", Math.Round(this.Start, 2).ToString(), Math.Round(this.End, 2).ToString());
+            return result;
         }
 
         #endregion
