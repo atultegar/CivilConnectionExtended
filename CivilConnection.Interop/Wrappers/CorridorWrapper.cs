@@ -13,6 +13,8 @@ namespace CivilConnection.Interop.Wrappers
 
         public string DisplayName => (string)ComObject.DisplayName;
 
+        public DocumentWrapper Document => new DocumentWrapper(ComObject.Document);
+
         public IEnumerable<BaselineWrapper> Baselines
         {
             get
@@ -24,10 +26,23 @@ namespace CivilConnection.Interop.Wrappers
             }
         }
 
+        public IEnumerable<CorridorSurfaceWrapper> CorridorSurfaces
+        {
+            get
+            {
+                foreach (dynamic surface in ComObject.CorridorSurfaces)
+                {
+                    yield return new CorridorSurfaceWrapper(surface);
+                }
+            }
+        }
+
         public void Rebuild()
         {
             ComObject.Rebuild();
         }
+
+        public bool IsFeaturelinesXMLExported { get; set; } = false;
 
         public override string ToString()
         {

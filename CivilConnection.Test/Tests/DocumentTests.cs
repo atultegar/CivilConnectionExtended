@@ -1,5 +1,4 @@
-﻿using CivilConnection.Contracts.Interfaces;
-using CivilConnection.Interop.Context;
+﻿using CivilConnection.Interop.Context;
 using CivilConnection.Interop.Services;
 using CivilConnection.Test.Utilities;
 using System;
@@ -26,6 +25,13 @@ namespace CivilConnection.Test.Tests
             var activeDoc = service.GetActiveDocument(context);
 
             Console.WriteLine($"ActiveDocument: {activeDoc.Name}");
+
+            Console.WriteLine($"Version: {activeDoc.Version}");
+
+            // Get all solids
+            var surfaceStyles = activeDoc.SurfaceStyles;
+
+            Console.WriteLine(surfaceStyles[0].Name);
         }
     }
 }

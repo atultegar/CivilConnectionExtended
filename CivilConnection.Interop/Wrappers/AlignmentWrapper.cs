@@ -1,4 +1,5 @@
 ﻿using CivilConnection.Contracts.Models.Civil;
+using CivilConnection.Contracts.Models.Geometry;
 using CivilConnection.Interop.Wrappers.Base;
 using Microsoft.SqlServer.Server;
 using System;
@@ -27,6 +28,50 @@ namespace CivilConnection.Interop.Wrappers
 
         public double EndingStation => Convert.ToDouble(ComObject.EndingStation);
 
+        public IEnumerable<StationEquationWrapper> StationEquations
+        {
+            get
+            {
+                foreach (dynamic stationEquation in ComObject.StationEquations)
+                {
+                    yield return new StationEquationWrapper(stationEquation);
+                }
+            }
+        }
+
+        public IEnumerable<AlignmentEntityWrapper> Entities
+        {
+            get
+            {
+                foreach (dynamic entity in ComObject.Entities)
+                {
+                    yield return new AlignmentEntityWrapper(entity);
+                }
+            }
+        }
+
+        public IEnumerable<ProfileWrapper> Profiles
+        {
+            get
+            {
+                foreach (dynamic profile in ComObject.Profiles)
+                {
+                    yield return new ProfileWrapper(profile);
+                }
+            }
+        }
+
+        public IEnumerable<ProfileViewWrapper> ProfileViews
+        {
+            get
+            {
+                foreach (dynamic profileView in ComObject.ProfileViews)
+                {
+                    yield return new ProfileViewWrapper(profileView);
+                }
+            }
+        }
+
         public override string ToString()
         {
             return $"Alignment (Name = {Name})";
@@ -46,6 +91,41 @@ namespace CivilConnection.Interop.Wrappers
                 Offset = offset,
                 Elevation = 0
             };
+        }
+
+        public PointData PointLocation(double station, double offset)
+        {
+            ComObject.PointLocation(
+                station, 
+                offset, 
+                out double easting, 
+                out double northing);
+
+            return new PointData
+            {
+                X = easting,
+                Y = northing,
+                Z = 0
+            };
+        }
+
+        public string GetStationStringWithEquations(double dRawStation)
+        {
+            return (string)ComObject.GetStationStringWithEquations(dRawStation);
+        }
+
+        public IEnumerable<SampleLineGroupWrapper> SampleLineGroups
+        {
+            get
+            {
+                if (ComObject.SampleLineGroups == null)
+                    yield break;
+
+                foreach (var group in ComObject.SampleLineGroups)
+                {
+                    yield return new SampleLineGroupWrapper(group);
+                }
+            }
         }
     }
 }

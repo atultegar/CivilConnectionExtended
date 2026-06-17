@@ -1,9 +1,5 @@
-﻿using CivilConnection.Interop.Wrappers.Base;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using CivilConnection.Contracts.Models.Civil;
+using CivilConnection.Interop.Wrappers.Base;
 
 namespace CivilConnection.Interop.Wrappers
 {
@@ -13,6 +9,19 @@ namespace CivilConnection.Interop.Wrappers
         {
         }
 
+        public CorridorWrapper Corridor => new CorridorWrapper(ComObject.Corridor);
+
+        public SOEData GetStationOffsetElevationToBaseline()
+        {
+            var soe = ComObject.GetStationOffsetElevationToBaseline();
+
+            return new SOEData
+            {
+                Station = soe[0],
+                Offset = soe[1],
+                Elevation = soe[2]
+            };
+        }
 
     }
 }

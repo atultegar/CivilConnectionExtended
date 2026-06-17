@@ -1,6 +1,8 @@
 ﻿using Autodesk.DesignScript.Geometry;
 using Autodesk.DesignScript.Runtime;
+using System;
 using System.Collections.Generic;
+using System.IO;
 
 namespace CivilConnection.Services
 {
@@ -45,5 +47,34 @@ namespace CivilConnection.Services
 
             return JoinSurfaces(result, limit);            
         }
+
+        public static IList<string> ExportToSat(Revit.Elements.Element element)
+        {
+            var satFiles = new List<string>();
+
+            foreach (var solid in element.Solids)
+            {
+                satFiles.Add(ExportSolidToSat(solid));
+            }
+
+            return satFiles;
+        }
+
+        public static string ExportSolidToSat(Solid solid)
+        {
+            string sat = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.sat");
+
+            try
+            {
+                Geometry.ExportToSAT(new[] { solid }, sat);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"ERROR: {ex.Message}");
+            }            
+
+            return sat;
+        }
+        
     }
 }

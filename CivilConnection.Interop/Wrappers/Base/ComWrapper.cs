@@ -15,6 +15,8 @@ namespace CivilConnection.Interop.Wrappers.Base
             ComObject = obj ?? throw new ArgumentNullException(nameof(obj));
         }
 
+        public string ObjectName { get; protected set; }
+
         public string Handle
         {
             get

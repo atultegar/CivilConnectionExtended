@@ -1,4 +1,5 @@
-﻿using CivilConnection.Contracts.Models.Geometry;
+﻿using CivilConnection.Contracts.Models.Civil;
+using CivilConnection.Contracts.Models.Geometry;
 using CivilConnection.Interop.Wrappers;
 using System;
 using System.Collections.Generic;
@@ -8,6 +9,13 @@ namespace CivilConnection.Interop.Services
 {
     public class CivilSurfaceService
     {
+        private readonly DocumentService _documentService;
+        private readonly CivilPythonService _civilPythonService;
+        public CivilSurfaceService()
+        {
+            _documentService = new DocumentService();
+            _civilPythonService = new CivilPythonService();
+        }
         public IList<CivilSurfaceWrapper> GetSurfaces(DocumentWrapper document)
         {
             var output = new List<CivilSurfaceWrapper>();
@@ -95,6 +103,29 @@ namespace CivilConnection.Interop.Services
             {
                 throw new Exception($"ERROR: {ex.Message}");
             }            
+        }
+
+        public TinSurfaceWrapper CreateTinSurfaceFromPoints(DocumentWrapper document, IList<PointData> points, string name, string layer)
+        {
+            if (document == null)
+                return null;
+
+            if (points.Count < 3)
+                return null;
+
+            var surfaceHandle = _civilPythonService.AddTinSurface(document, name);
+
+            var surface = new TinSurfaceWrapper(document.HandleToObject(surfaceHandle));
+
+            surface.Description = "Created by CivilConnection";
+
+            var pointGroup = _documentService.AddPointGroup(document, points, name);
+
+            surface.AddPointGroup(pointGroup);
+
+            surface.Rebuild();
+
+            return surface;
         }
     }
 }

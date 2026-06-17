@@ -457,7 +457,7 @@ namespace CivilConnection
                                         }
                                         catch (Exception ex)
                                         {
-                                            Utils.Log($"ERROR: {station} Z {ex.Message}",);
+                                            Utils.Log($"ERROR: {station} Z {ex.Message}");
                                             continue;
                                         }
 

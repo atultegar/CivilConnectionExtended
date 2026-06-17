@@ -18,13 +18,11 @@
 
 using Autodesk.DesignScript.Geometry;
 using Autodesk.DesignScript.Runtime;
-using CivilConnection.Contracts.Models.Civil;
 using CivilConnection.Converters;
 using CivilConnection.Interop.Services;
 using CivilConnection.Interop.Wrappers;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 
 namespace CivilConnection
@@ -405,11 +403,16 @@ namespace CivilConnection
         {
             Utils.LogMethodStart(this);
 
-            var output = GetFeaturelinesFromXML(code);
+            try
+            {
+                var data = _baselineService.GetFeaturelines(_baseline, code);
 
-            Utils.LogMethodEnd(this);
-
-            return output;
+                return FeaturelineConverter.ToDynamo(data, this);
+            }
+            finally
+            {
+                Utils.LogMethodEnd(this);
+            }
         }
 
         /// <summary>
@@ -477,184 +480,6 @@ namespace CivilConnection
             {
                 return "<None>";
             }
-        }
-
-        /// <summary>
-        /// Returns a collection of Featurelines in the Baseline for the given code organized by regions.
-        /// </summary>
-        /// <param name="code">The code of the Featurelines.</param>
-        /// <returns></returns>
-        private IList<IList<Featureline>> GetFeaturelinesFromXML(string code)
-        {
-            Utils.Log($"Baseline.GetFeaturelinesFromXML started ({code})...");
-
-            string nullXmlPath = Path.Combine(Environment.GetEnvironmentVariable("TMP", EnvironmentVariableTarget.User), string.Format("CorridorFeatureLines.xml", ""));
-
-            bool nullCorridor = false;
-
-            string xmlPath = Path.Combine(Environment.GetEnvironmentVariable("TMP", EnvironmentVariableTarget.User), string.Format("CorridorFeatureLines_{0}.xml", this._corridor.Name));  // Revit 2020 changed the path to the temp at a session level
-
-            Utils.Log(xmlPath);
-
-            if (!this._corridor._corridorFeaturelinesXMLExported)
-            {
-                // Check for installation of CivilPython
-                if (!Utils.EnsureCivilPythonInstalled())
-                {
-                    return null;
-                }
-
-                var doc = _baseline.Alignment.Document;
-
-                doc.SendCommand(string.Format("-ExportCorridorFeatureLinesToXml\n{0}\n", _baseline.Corridor.Handle));
-
-                DateTime start = DateTime.Now;
-
-                while (true)
-                {
-                    if (File.Exists(xmlPath))
-                    {
-                        if (File.GetLastWriteTime(xmlPath) > start)
-                        {
-                            start = File.GetLastWriteTime(xmlPath);
-                        }
-                        else
-                        {
-                            break;
-                        }
-                    }
-
-                    if (File.Exists(nullXmlPath))
-                    {
-                        if (File.GetLastWriteTime(nullXmlPath) > start)
-                        {
-                            start = File.GetLastWriteTime(nullXmlPath);
-                        }
-                        else
-                        {
-                            nullCorridor = true;
-                            break;
-                        }
-                    }
-                }
-
-                _corridor._corridorFeaturelinesXMLExported = true;
-            }
-
-            if (_corridor._corridorFeaturelinesXMLExported)
-            {
-                if (File.Exists(nullXmlPath))
-                {
-                    nullCorridor = true;
-                }
-            }
-
-            if (nullCorridor)
-            {
-                Utils.Log(string.Format("{0}", nullXmlPath));
-            }
-
-            Utils.Log("XML acquired.");
-
-            if (File.Exists(xmlPath) || File.Exists(nullXmlPath))
-            {
-                if (nullCorridor)
-                {
-                    xmlPath = nullXmlPath;
-                }
-
-                var data = _landXmlService.ReadFeaturelines(xmlPath, CorridorName, Index, code);
-
-                var output = CreateFeaturelines(data, code);
-
-                return output;
-            }
-            else
-            {
-                Utils.Log("ERROR: Failed to locate CorridorFeatureLines.xml in the Temp folder.");
-                return null;
-            }
-
-        }
-
-        private IList<IList<Featureline>> CreateFeaturelines(IEnumerable<FeaturelineData> data, string code)
-        {
-            var output = new List<Featureline>();
-
-            foreach (var fl in data)
-            {
-                var groups = SplitByBreaksAndRegions(fl.Points);
-
-                foreach (var group in groups)
-                {
-                    if (group.Count < 2)
-                        continue;
-
-                    var points = group.Select(p => Point.ByCoordinates(p.X, p.Y, p.Z)).ToList();
-
-                    points = Point.PruneDuplicates(points).ToList();
-
-                    if (points.Count < 2)
-                        continue;
-
-                    PolyCurve polyCurve = PolyCurve.ByPoints(points);
-
-                    output.Add(new Featureline(
-                        this,
-                        polyCurve,
-                        code,
-                        fl.Side < 0 ? Featureline.SideType.Left : Featureline.SideType.Right,
-                        group.First().RegionIndex));
-                }
-            }
-
-            return output
-                .OrderBy(x => x.BaselineRegionIndex)
-                .GroupBy(x => x.BaselineRegionIndex)
-                .Select(g => (IList<Featureline>)g.ToList())
-                .ToList();
-        }
-
-        private static List<List<FeaturelinePointData>> SplitByBreaksAndRegions(IList<FeaturelinePointData> points)
-        {
-            var result = new List<List<FeaturelinePointData>>();
-
-            List<FeaturelinePointData> current = new List<FeaturelinePointData>();
-
-            int region = -1;
-
-            foreach (var point in points)
-            {
-                if (region == -1)
-                {
-                    region = point.RegionIndex;
-                }
-
-                if (point.RegionIndex != region)
-                {
-                    result.Add(current);
-
-                    current = new List<FeaturelinePointData>();
-
-                    region = point.RegionIndex;
-                }
-
-                current.Add(point);
-
-                if (point.IsBreak)
-                {
-                    result.Add(current);
-
-                    current = new List<FeaturelinePointData>();
-                }
-            }
-
-            if (current.Count > 0)
-            {
-                result.Add(current);
-            }
-
-            return result;
         }
 
         #endregion

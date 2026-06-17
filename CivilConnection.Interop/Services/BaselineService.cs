@@ -3,12 +3,25 @@ using CivilConnection.Contracts.Models.Geometry;
 using CivilConnection.Interop.Wrappers;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Reflection;
 
 namespace CivilConnection.Interop.Services
 {
     public class BaselineService
     {
+        private readonly CivilPythonService _civilPythonService;
+        private readonly CorridorService _corridorService;
+        private readonly LandXmlService _landXmlService;
+
+        public BaselineService()
+        {
+            _civilPythonService = new CivilPythonService();
+            _corridorService = new CorridorService();
+            _landXmlService = new LandXmlService();
+        }
+
         public PointData PointByStationOffsetElevation(
             BaselineWrapper baseline, 
             double station, 
@@ -16,6 +29,13 @@ namespace CivilConnection.Interop.Services
             double elevation)
         {
             return baseline.StationOffsetElevationToXYZ(station, offset, elevation);
+        }
+
+        public PointData PointByStationOffsetElevation(
+            BaselineWrapper baseline,
+            SOEData soe)
+        {
+            return baseline.StationOffsetElevationToXYZ(soe.Station, soe.Offset, soe.Elevation);
         }
 
         public int GetRegionIndex(BaselineWrapper baseline, double station)
@@ -44,6 +64,16 @@ namespace CivilConnection.Interop.Services
         public List<AlignmentWrapper> GetOffsetAlignments(BaselineWrapper baseline)
         {
             return baseline.GetOffsetAlignments().ToList();
+        }
+
+        public IList<IList<FeaturelineData>> GetFeaturelines(BaselineWrapper baseline, string code)
+        {
+            string xmlPath = _corridorService.GetFeaturelinesXmlPath(baseline.Corridor);
+
+            return new List<IList<FeaturelineData>>
+            {
+                _landXmlService.ReadFeaturelines(xmlPath, baseline.Corridor.Name, baseline.Index, code)
+            };
         }
 
         public List<FeaturelineData> GetFeaturelinesAtStation(BaselineWrapper baseline, string code, double station)
@@ -94,6 +124,7 @@ namespace CivilConnection.Interop.Services
                 }
             }
             return result;
-        }       
+        }
+
     }
 }

@@ -23,7 +23,7 @@ namespace CivilConnection.Interop.Services
             {
                 stations.Add(entity.StartStation);
 
-                if (entity.HasHighLowPoint))
+                if (entity.HasHighLowPoint)
                 {
                     stations.Add(entity.HighLowPointStation);
                 }

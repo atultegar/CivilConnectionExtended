@@ -14,8 +14,6 @@ namespace CivilConnection.Test.Tests
 
             try
             {
-                
-
                 var geometryService = new GeometryService();
 
                 // Simple horizontal arc

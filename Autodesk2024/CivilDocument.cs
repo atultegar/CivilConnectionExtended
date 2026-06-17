@@ -16,22 +16,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-using Autodesk.AECC.Interop.Land;
-using Autodesk.AECC.Interop.Roadway;
-using Autodesk.AutoCAD.Interop.Common;
 using Autodesk.DesignScript.Geometry;
 using Autodesk.DesignScript.Runtime;
 using CivilConnection.Contracts.Models;
+using CivilConnection.Contracts.Models.Geometry;
+using CivilConnection.Contracts.Models.Requests;
 using CivilConnection.Converters;
 using CivilConnection.Interop.Context;
+using CivilConnection.Interop.Models;
 using CivilConnection.Interop.Services;
 using CivilConnection.Interop.Wrappers;
+using CivilConnection.Services;
 using Revit.Elements;
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
-using System.Xml;
 
 namespace CivilConnection
 {
@@ -62,6 +61,12 @@ namespace CivilConnection
 
         private readonly GeometryService _geometryService;
 
+        private readonly DocumentService _documentService;
+
+        private readonly LandXmlService _landXmlService;
+
+        private readonly CivilPythonService _civilPythonService;
+    
         #endregion
 
         #region CONSTRUCTORS
@@ -69,11 +74,12 @@ namespace CivilConnection
         /// <summary>
         /// Initializes a new instance of the CivilDocument class with the specified context, document, and data.
         /// </summary>
-        /// <param name="context">The CivilContext that provides access to civil-specific services and settings for the document.</param>
         /// <param name="document">The underlying dynamic document object to be associated with this CivilDocument instance.</param>
         internal CivilDocument(DocumentWrapper document)
         {
             _document = document;
+
+            _documentService = new DocumentService();
 
             _alignmentService = new AlignmentService();
 
@@ -84,6 +90,10 @@ namespace CivilConnection
             _commandService = new CommandService();
 
             _geometryService = new GeometryService();
+
+            _landXmlService = new LandXmlService();
+
+            _civilPythonService = new CivilPythonService();
         }
 
         #endregion
@@ -101,22 +111,7 @@ namespace CivilConnection
         /// <value>
         /// The internal element.
         /// </value>
-        internal object InternalElement => _document;
-
-        /// <summary>
-        /// The corridors
-        /// </summary>
-        private AeccCorridors _corridors;
-
-        /// <summary>
-        /// The alignments
-        /// </summary>
-        private AeccAlignmentsSiteless _alignments;
-
-        /// <summary>
-        /// The Surfaces
-        /// </summary>
-        private AeccSurfaces _surfaces;
+        internal DocumentWrapper InternalElement => _document;
 
         #endregion
 
@@ -201,7 +196,7 @@ namespace CivilConnection
             Utils.Log("CivilDocument.GetSurfaces started...");
 
             // Cast the lambda to a delegate to avoid CS1977 when the call becomes dynamically dispatched
-            var selector = (Func<dynamic, CivilSurface>)(x => new CivilSurface(_context, x));
+            var selector = (Func<dynamic, CivilSurface>)(x => new CivilSurface(x));
 
             var output = _surfaceService
                 .GetSurfaces(_document)
@@ -343,7 +338,7 @@ namespace CivilConnection
 
             Utils.LogMethodEnd(this);
 
-            return handles;
+            return handles.ToList();
         }
 
         /// <summary>
@@ -432,9 +427,9 @@ namespace CivilConnection
         {
             Utils.LogMethodStart(this);
 
-            var polylineData = GeometryConverter.ToPolylineData(points);
+            var pointsData = points.Select(GeometryConverter.ToPointData).ToList();
 
-            var handle = _geometryService.AddPolyline(_document, polylineData, layer);
+            var handle = _geometryService.AddLWPolylineByPoints(_document, pointsData, layer);
 
             Utils.LogMethodEnd(this);
 
@@ -596,29 +591,73 @@ namespace CivilConnection
         /// Creates a solid to be used to cut the solids in the Civil 3D Document.
         /// </summary>
         /// <param name="geometry">The solid geometry.</param>
-        /// <param name="layer">The layer where to crerate the cutting solid.</param>
+        /// <param name="layer">The layer where to create the cutting solid.</param>
         /// <returns></returns>
-        public bool CutSolidsByGeometry(Geometry[] geometry, string layer)
+        public bool CutSolidsByGeometry(Geometry[] geometry, string layer = "_CivilConnectionSolid")
         {
-
             Utils.LogMethodStart(this);
 
-            // #TODO
+            var satFiles = new List<string>();
 
-            Utils.LogMethodEnd(this);
+            try
+            {
+                foreach (var g in geometry)
+                {
+                    if (g is Solid solid)
+                    {
+                        var sat = DynamoGeometryService.ExportSolidToSat(solid);
 
-            return false;
+                        satFiles.Add(sat);
+                    }
+                }
+
+                var request = new GeometryImportRequest
+                {
+                    SatFiles = satFiles,
+                    DeleteSatFilesAfterImport = true
+                };
+
+                return _geometryService.CutSolidBySolid(_document, request, layer);
+            }
+            finally
+            {
+                Utils.LogMethodEnd(this);
+            }
         }
 
         /// <summary>
         /// Import the geometry from Dynamo into the Civil 3D Document.
         /// </summary>
         /// <param name="geometry">The geometry.</param>
-        /// <param name="layer">The layer where to crerate the solid.</param>
+        /// <param name="layer">The layer where to create the solid.</param>
         /// <returns></returns>
-        public IList<string> ImportGeometry(Geometry[] geometry, string layer)
+        public IList<string> ImportGeometry(Geometry[] geometry, string layer = "_CivilConnectionSolid")
         {
-            return Utils.ImportGeometry(this._document, geometry, layer);
+            var geometryData = new List<IGeometryData>();
+            var satFiles = new List<string>();
+
+            foreach (var g in geometry)
+            {
+                if (g is Solid solid)
+                {
+                    var sat = DynamoGeometryService.ExportSolidToSat(solid);
+
+                    satFiles.Add(sat);
+                }
+                else
+                {
+                    geometryData.Add(GeometryConverter.Convert(g as Curve));
+                }
+            }
+
+            var geometryRequest = new GeometryImportRequest
+            {
+                Geometry = geometryData,
+                SatFiles = satFiles,
+                DeleteSatFilesAfterImport = true
+            };
+
+            return _geometryService.ImportGeometry(_document, geometryRequest, layer);
         }
 
         /// <summary>
@@ -630,10 +669,47 @@ namespace CivilConnection
         /// <returns></returns>
         public string LinkElement(Revit.Elements.Element element, string parameter, string layer)
         {
-            return Utils.ImportElement(this._document, element, parameter, layer);
+            Utils.LogMethodStart(this);
+
+            var totalTransform = RevitUtils.DocumentTotalTransform();
+
+            var totalTransformInverse = RevitUtils.DocumentTotalTransformInverse();
+
+            try
+            {
+                var existingHandles = RevitUtils.GetHandlesFromParameter(element, parameter);
+
+                var satFiles = DynamoGeometryService.ExportToSat(element);
+
+                if (!satFiles.Any())
+                {
+                    Utils.Log($"No SAT files were generated.");
+                    return string.Empty;
+                }
+
+                var request = new SolidImportRequest
+                {
+                    ExistingHandles = existingHandles,
+                    SatFiles = satFiles,
+                    Layer = layer,
+                    ReplaceExisting = existingHandles.Any()
+                };
+
+                string handles = _documentService.ImportSolid(_document, request);
+
+                element.SetParameterByName(parameter, handles);
+
+                Utils.LogMethodEnd(this);
+
+                return handles;
+            }
+            catch (Exception ex)
+            {
+                Utils.Log($"ERROR: {ex}");
+
+                throw;
+            }
         }
-
-
 
         /// <summary>
         /// Slices the solids in Civil 3D using a Dynamo Plane.
@@ -642,117 +718,42 @@ namespace CivilConnection
         /// <returns></returns>
         public bool SliceSolidsByPlane(Plane plane)
         {
-            return Utils.SliceSolidsByPlane(this._document, plane);
+            Utils.LogMethodStart(this);
+
+            var planeData = GeometryConverter.ToPlaneData(plane);
+
+            var output = _geometryService.SliceSolidsByPlane(_document, planeData, true);
+
+            Utils.LogMethodEnd(this);
+
+            return output;
         }
 
         #endregion
 
         #region PRIVATE METHODS
-        /// <summary>
-        /// Creates a LandXML from the Civil Document
-        /// </summary>
-        /// <returns></returns>
-        private string DumpLandXML()
-        {
-            return Utils.DumpLandXML(this._document);
-        }
-
+        
         /// <summary>
         /// Gets the land featurelines.
         /// </summary>
         /// <param name="xmlPath">The XML path for the LandFeaturerline properties.</param>
         /// <returns></returns>
         /// 
-        [IsVisibleInDynamoLibraryAttribute(false)]
+        [IsVisibleInDynamoLibrary(false)]
         public IList<LandFeatureline> GetLandFeaturelines(string xmlPath = "")
         {
-            Utils.Log(string.Format("CivilDocument.GetLandFeaturelines started...", ""));
+            Utils.LogMethodStart(this);
 
-            if (string.IsNullOrEmpty(xmlPath))
+            if (string.IsNullOrWhiteSpace(xmlPath))
             {
-                xmlPath = System.IO.Path.Combine(Environment.GetEnvironmentVariable("TMP", EnvironmentVariableTarget.User), "LandFeatureLinesReport.xml");
+                xmlPath = _documentService.ExportLandFeaturelinesXml(_document);
             }
 
-            if (!Utils.EnsureCivilPythonInstalled())
-            {
-                return null;
-            }
+            var data = _landXmlService.ReadLandFeaturelines(xmlPath);
 
-            this.SendCommand("-ExportLandFeatureLinesToXml\n");
+            var output = data.Select(x => FeaturelineConverter.ToDynamo(x, _document)).ToList();
 
-            System.DateTime start = System.DateTime.Now;
-
-
-            while (true)
-            {
-                if (System.IO.File.Exists(xmlPath))
-                {
-                    if (System.IO.File.GetLastWriteTime(xmlPath) > start)
-                    {
-                        start = System.IO.File.GetLastWriteTime(xmlPath);
-                    }
-                    else
-                    {
-                        break;
-                    }
-                }
-            }
-
-            Utils.Log("XML acquired.");
-
-            bool result = true;
-
-            IList<LandFeatureline> output = new List<LandFeatureline>();
-
-            if (result)
-            {
-                XmlDocument xmlDoc = new XmlDocument();
-                xmlDoc.Load(xmlPath);
-
-                AcadDatabase db = this._document as AcadDatabase;
-                AcadModelSpace ms = db.ModelSpace;
-
-                foreach (AcadEntity e in ms)
-                {
-                    if (e.EntityName.ToLower().Contains("featureline"))
-                    {
-                        AeccLandFeatureLine f = e as AeccLandFeatureLine;
-
-                        XmlElement fe = xmlDoc.GetElementsByTagName("FeatureLine").Cast<XmlElement>().First(x => x.Attributes["Handle"].Value == f.Handle.ToString());
-
-                        IList<Point> points = new List<Point>();
-
-                        foreach (XmlElement p in fe.GetElementsByTagName("Point"))
-                        {
-                            double x = Convert.ToDouble(p.Attributes["X"].Value, CultureInfo.InvariantCulture);
-                            double y = Convert.ToDouble(p.Attributes["Y"].Value, CultureInfo.InvariantCulture);
-                            double z = Convert.ToDouble(p.Attributes["Z"].Value, CultureInfo.InvariantCulture);
-
-                            points.Add(Point.ByCoordinates(x, y, z));
-                        }
-
-                        points = Point.PruneDuplicates(points);
-
-                        if (points.Count > 1)
-                        {
-                            PolyCurve pc = PolyCurve.ByPoints(points);
-                            string style = fe.Attributes["Style"].Value;
-
-                            output.Add(new LandFeatureline(f, pc, style));
-                        }
-
-                        foreach (var item in points)
-                        {
-                            if (item != null)
-                            {
-                                item.Dispose();
-                            }
-                        }
-                    }
-                }
-
-                Utils.Log(string.Format("CivilDocument.GetLandFeaturelines completed.", ""));
-            }
+            Utils.LogMethodEnd(this);
 
             return output;
         }
@@ -762,10 +763,6 @@ namespace CivilConnection
         
 
         #region AUTOCAD METHODS
-        
-
-        
-
         
 
         #endregion
@@ -779,12 +776,14 @@ namespace CivilConnection
         /// <returns></returns>
         public string AddCivilPoint(Point point)
         {
-            return Utils.AddCivilPointByPoint(this._document, point);
+            Utils.LogMethodStart(this);
+
+            var handle = _documentService.AddCivilPoint(_document, GeometryConverter.ToPointData(point));
+
+            Utils.LogMethodEnd(this);
+
+            return handle;
         }
-
-        
-
-        
 
         /// <summary>
         /// Adds the civil point group.
@@ -794,21 +793,16 @@ namespace CivilConnection
         /// <returns></returns>
         public string AddCivilPointGroup(Point[] points, string name)
         {
-            return Utils.AddPointGroupByPoint(this._document, points, name);
+            Utils.LogMethodStart(this);
+
+            var pointsData = points.Select(GeometryConverter.ToPointData).ToList();
+
+            var pointGroupWrapper = _documentService.AddPointGroup(_document, pointsData, name);
+
+            Utils.LogMethodEnd(this);
+
+            return pointGroupWrapper.Name;
         }
-
-        /// <summary>
-        /// Gets the Civil point groups.
-        /// </summary>
-        /// <returns></returns>
-        //[MultiReturn(new string[] { "PointGroupNames", "Points" })]
-        //public Dictionary<string, object> GetPointGroups()
-        //{
-        //    var dict = Utils.GetPointGroups(this._document);
-
-        //    return new Dictionary<string, object>() { { "PointGroupNames", dict.Keys }, { "Points", dict.Values } };
-        //}
-
 
         /// <summary>
         /// Adds the tin surface by points.
@@ -820,7 +814,15 @@ namespace CivilConnection
         //[IsVisibleInDynamoLibrary(false)]
         public string AddTINSurfaceByPoints(Point[] points, string name, string layer)
         {
-            return Utils.AddTINSurfaceByPoints(this._document, points, name, layer);
+            Utils.LogMethodStart(this);
+
+            var pointsData = points.Select(GeometryConverter.ToPointData).ToList();
+
+            var tinSurfaceWrapper = _surfaceService.CreateTinSurfaceFromPoints(_document, pointsData, name, layer);
+
+            Utils.LogMethodEnd(this);
+
+            return tinSurfaceWrapper.Handle;
         }
 
         /// <summary>
@@ -830,7 +832,13 @@ namespace CivilConnection
         /// <returns></returns>
         public string AddPropertySetDefinition(string path)
         {
-            return Utils.CreatePropertySetDefinition(this._document, path);
+            Utils.LogMethodStart(this);
+
+            var output = _civilPythonService.CreatePropertySetDefinition(_document, path);
+
+            Utils.LogMethodEnd(this);
+
+            return output;
         }
 
         /// <summary>
@@ -841,7 +849,13 @@ namespace CivilConnection
         /// <returns></returns>
         public string CreatePropertySets(string psetDefinitionName, string path)
         {
-            return Utils.CreatePropertySets(_document, psetDefinitionName, path);
+            Utils.LogMethodStart(this);
+
+            var output = _civilPythonService.CreatePropertySets(_document, psetDefinitionName, path);
+
+            Utils.LogMethodEnd(this);
+
+            return output;
         }
 
         /// <summary>
@@ -864,7 +878,8 @@ namespace CivilConnection
                 return psdOutput;
 
             // Step 2 - AddPropertySetDefinition
-            string psdName = Utils.CreatePropertySetDefinition(this._document, psdOutput);
+            string psdName = _civilPythonService.CreatePropertySetDefinition(_document, psdOutput);
+
 
             if (psdName != propertySetDefName)
                 return psdName;
@@ -876,7 +891,7 @@ namespace CivilConnection
                 return objXmlOutput;
 
             // Step 4 - CreatePropertySets
-            output = Utils.CreatePropertySets(this._document,psdName, objXmlOutput);
+            output = _civilPythonService.CreatePropertySets(_document, psdName, objXmlOutput);
 
             return output;
         }
@@ -890,7 +905,7 @@ namespace CivilConnection
         /// </returns>
         public override string ToString()
         {
-            return string.Format("CivilDocument(Name = {0})", this.Name);
+            return $"CivilDocument(Name = {Name})";
         }
         #endregion
     }

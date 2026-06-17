@@ -21,15 +21,15 @@ namespace CivilConnection.Test.Tests
 
             Console.WriteLine($"Alignments found: {alignments.Count}");
 
-            var selectedAlignment = service.GetAlignmentByName(doc, "Spår 22");
+            var selectedAlignment = service.GetAlignmentByName(doc, "Kvn 21");
 
             Console.WriteLine(selectedAlignment);
 
-            var geometryStations  = service.GetEquationStations(selectedAlignment);
+            var entities = service.GetEntities(selectedAlignment);
 
-            foreach ( var geometry in geometryStations)
+            foreach (var entity in entities)
             {
-                Console.WriteLine($"Station: {geometry}");
+                Console.WriteLine(entity.EntityType);
             }
         }
     }

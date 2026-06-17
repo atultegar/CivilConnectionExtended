@@ -1,5 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-	
+
 	<PropertyGroup>
 		<TargetFramework>net48</TargetFramework>
 
@@ -50,10 +50,10 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\CivilConnection.Contracts\CivilConnection.Contracts.csproj" />
+		<ProjectReference Include="..\CivilConnection.Contracts\CivilConnection.Contracts.csproj" />
 	</ItemGroup>
-	
-	
+
+
 	<!--References-->
 
 	<ItemGroup>
@@ -61,14 +61,14 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		
+
 		<Reference Include="Autodesk.AECC.Interop.Land">
 			<HintPath>C:\Program Files\Autodesk\AutoCAD $(C3DVersion)\C3D\Autodesk.AECC.Interop.Land.dll</HintPath>
 			<EmbedInteropTypes>False</EmbedInteropTypes>
 			<Private>False</Private>
 			<SpecificVersion>False</SpecificVersion>
 		</Reference>
-		
+
 		<Reference Include="Autodesk.AECC.Interop.Roadway">
 			<HintPath>C:\Program Files\Autodesk\AutoCAD $(C3DVersion)\C3D\Autodesk.AECC.Interop.Roadway.dll</HintPath>
 			<EmbedInteropTypes>False</EmbedInteropTypes>
@@ -82,14 +82,14 @@
 			<Private>False</Private>
 			<SpecificVersion>False</SpecificVersion>
 		</Reference>
-		
+
 		<Reference Include="Autodesk.AutoCAD.Interop.Common">
 			<HintPath>C:\Program Files\Autodesk\AutoCAD $(C3DVersion)\Autodesk.AutoCAD.Interop.Common.dll</HintPath>
 			<EmbedInteropTypes>False</EmbedInteropTypes>
 			<Private>False</Private>
 			<SpecificVersion>False</SpecificVersion>
 		</Reference>
-		
+
 		<Reference Include="Autodesk.AEC.Interop.Base">
 			<HintPath>C:\Program Files\Autodesk\AutoCAD $(C3DVersion)\ACA\Autodesk.AEC.Interop.Base.dll</HintPath>
 			<EmbedInteropTypes>False</EmbedInteropTypes>
@@ -101,8 +101,8 @@
 			<EmbedInteropTypes>False</EmbedInteropTypes>
 			<Private>False</Private>
 			<SpecificVersion>False</SpecificVersion>
-		</Reference>		
-		
+		</Reference>
+
 		<Reference Include="Autodesk.AECC.Interop.UiLand">
 			<HintPath>C:\Program Files\Autodesk\AutoCAD $(C3DVersion)\C3D\Autodesk.AECC.Interop.UiLand.dll</HintPath>
 			<EmbedInteropTypes>False</EmbedInteropTypes>
@@ -115,12 +115,11 @@
 			<Private>False</Private>
 			<SpecificVersion>False</SpecificVersion>
 		</Reference>
-		
+
 	</ItemGroup>
 
 	<ItemGroup>
-	  <Folder Include="Extensions\" />
-	  <Folder Include="Interfaces\" />
+		<Folder Include="Extensions\" />
 	</ItemGroup>
-	
+
 </Project>

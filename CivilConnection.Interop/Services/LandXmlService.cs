@@ -170,6 +170,114 @@ namespace CivilConnection.Interop.Services
             return result;
         }
 
+        public IList<LandFeaturelineData> ReadLandFeaturelines(string xmlPath)
+        {
+            var output = new List<LandFeaturelineData>();
+
+            var xmlDoc = LoadXml(xmlPath);
+
+            foreach (XmlElement featurelineNode in xmlDoc.GetElementsByTagName("FeatureLine"))
+            {
+                var data = new LandFeaturelineData
+                {
+                    Handle = featurelineNode.GetAttribute("Handle"),
+                    Name = featurelineNode.GetAttribute("Name"),
+                    Style = featurelineNode.GetAttribute("Style")
+                };
+
+                foreach (XmlElement pointNode in featurelineNode.GetElementsByTagName("Point"))
+                {
+                    data.Points.Add(
+                        new PointData
+                        {
+                            X = double.Parse(pointNode.GetAttribute("X"), CultureInfo.InvariantCulture),
+                            Y = double.Parse(pointNode.GetAttribute("Y"), CultureInfo.InvariantCulture),
+                            Z = double.Parse(pointNode.GetAttribute("Z"), CultureInfo.InvariantCulture)
+                        });
+                }
+
+                output.Add(data);
+            }
+
+            return output;
+        }
+
+        public IList<IList<IList<AppliedSubassemblyShapeData>>> ReadShapes(string xmlPath, string corridorName)
+        {
+            var result = new List<IList<IList<AppliedSubassemblyShapeData>>>();
+
+            var xmlDoc = LoadXml(xmlPath);
+
+            var corridor = GetCorridorElement(xmlDoc, corridorName);
+
+            if (corridor == null)
+                return result;
+
+            foreach (XmlElement baselineElement in corridor.GetElementsByTagName("Baseline"))
+            {
+                var baselineShapes = new List<IList<AppliedSubassemblyShapeData>>();
+
+                foreach (XmlElement regionElement in baselineElement.GetElementsByTagName("Region"))
+                {
+                    var regionShapes = new List<AppliedSubassemblyShapeData>();
+
+                    foreach (XmlElement shapeElement in regionElement.GetElementsByTagName("Shape"))
+                    {
+                        var shape = ReadShape(shapeElement);
+
+                        if (shape != null)
+                        {
+                            regionShapes.Add(shape);
+                        }
+                    }
+
+                    baselineShapes.Add(regionShapes);
+                }
+
+                result.Add(baselineShapes);
+            }
+
+            return result;             
+        }
+
+        public IList<IList<IList<AppliedSubassemblyLinkData>>> ReadLinks(string xmlPath, string corridorName)
+        {
+            var result = new List<IList<IList<AppliedSubassemblyLinkData>>>();
+
+            var xmlDoc = LoadXml(xmlPath);
+
+            var corridor = GetCorridorElement(xmlDoc, corridorName);
+
+            if (corridor == null)
+                return result;
+
+            foreach (XmlElement baselineElement in corridor.GetElementsByTagName("Baseline"))
+            {
+                var baselineLinks = new List<IList<AppliedSubassemblyLinkData>>();
+
+                foreach (XmlElement regionElement in baselineElement.GetElementsByTagName("Region"))
+                {
+                    var regionLinks = new List<AppliedSubassemblyLinkData>();
+
+                    foreach (XmlElement linkElement in regionElement.GetElementsByTagName("Link"))
+                    {
+                        var link = ReadLink(linkElement);
+
+                        if (link != null)
+                        {
+                            regionLinks.Add(link);
+                        }
+                    }
+
+                    baselineLinks.Add(regionLinks);
+                }
+
+                result.Add(baselineLinks);
+            }
+
+            return result;
+        }
+
         #endregion
 
         #region PRIVATE METHODS
@@ -243,8 +351,19 @@ namespace CivilConnection.Interop.Services
                     .Cast<XmlElement>()
                     .FirstOrDefault(x =>
                         string.Equals(
-                            x.Attributes["name"]?.Value,
+                            x.Attributes["Name"]?.Value,
                             surfaceName,
+                            StringComparison.OrdinalIgnoreCase));
+        }
+
+        private XmlElement GetCorridorElement(XmlDocument xmlDoc, string corridorName)
+        {
+            return xmlDoc.GetElementsByTagName("Corridor")
+                    .Cast<XmlElement>()
+                    .FirstOrDefault(x =>
+                        string.Equals(
+                            x.Attributes["Name"]?.Value,
+                            corridorName,
                             StringComparison.OrdinalIgnoreCase));
         }
 
@@ -281,7 +400,109 @@ namespace CivilConnection.Interop.Services
                 CultureInfo.InvariantCulture);
         }
 
+        private List<string> ReadCodes(XmlElement parent)
+        {
+            var codes = new List<string>();
 
+            var codeElements = parent.GetElementsByTagName("Code");
+
+            foreach (XmlElement codeElement in codeElements)
+            {
+                string code = codeElement.Attributes["Name"]?.Value;
+
+                if (!string.IsNullOrWhiteSpace(code) &&
+                    !codes.Contains(code))
+                {
+                    codes.Add(code);
+                }
+            }
+
+            if (codes.Count == 0)
+            {
+                codes.Add("_NoCode_");
+            }
+
+            return codes;
+        }
+
+        private AppliedSubassemblyShapeData ReadShape(XmlElement shapeElement)
+        {
+            var points = ReadPoints(shapeElement);
+
+            if (points.Count < 2)
+                return null;
+
+            string name = string.Join("_",
+                shapeElement.Attributes["Corridor"]?.Value,
+                shapeElement.Attributes["BaselineIndex"]?.Value,
+                shapeElement.Attributes["RegionIndex"]?.Value,
+                shapeElement.Attributes["AssemblyName"]?.Value,
+                shapeElement.Attributes["SubassemblyName"]?.Value,
+                shapeElement.Attributes["Handle"]?.Value,
+                shapeElement.Attributes["ShapeIndex"]?.Value);
+
+            return new AppliedSubassemblyShapeData
+            {
+                Name = name,
+                Station = Convert.ToDouble(
+                    shapeElement.Attributes["Station"]?.Value,
+                    CultureInfo.InvariantCulture),
+                Codes = ReadCodes(shapeElement),
+                BoundaryPoints = points
+            };
+        }
+
+        private AppliedSubassemblyLinkData ReadLink(XmlElement linkElement)
+        {
+            var points = ReadPoints(linkElement);
+
+            if (points.Count < 2)
+                return null;
+
+            string name = string.Join("_",
+                linkElement.Attributes["Corridor"]?.Value,
+                linkElement.Attributes["BaselineIndex"]?.Value,
+                linkElement.Attributes["RegionIndex"]?.Value,
+                linkElement.Attributes["AssemblyName"]?.Value,
+                linkElement.Attributes["SubassemblyName"]?.Value,
+                linkElement.Attributes["Handle"]?.Value,
+                linkElement.Attributes["ShapeIndex"]?.Value);
+
+            return new AppliedSubassemblyLinkData
+            {
+                Name = name,
+                Station = Convert.ToDouble(
+                    linkElement.Attributes["Station"]?.Value,
+                    CultureInfo.InvariantCulture),
+                Codes = ReadCodes(linkElement),
+                Points = points
+            };
+        }
+
+        private List<PointData> ReadPoints(XmlElement parent)
+        {
+            var points = new List<PointData>();
+
+            foreach (XmlElement pointElement in parent.GetElementsByTagName("Point"))
+            {
+                points.Add(new PointData
+                {
+                    X = Convert.ToDouble(
+                        pointElement.Attributes["X"].Value,
+                        CultureInfo.InvariantCulture),
+
+                    Y = Convert.ToDouble(
+                        pointElement.Attributes["Y"].Value,
+                        CultureInfo.InvariantCulture),
+
+                    Z = Convert.ToDouble(
+                        pointElement.Attributes["Z"].Value,
+                        CultureInfo.InvariantCulture)
+                });
+            }
+
+            return points;
+        }
 
         #endregion
     }

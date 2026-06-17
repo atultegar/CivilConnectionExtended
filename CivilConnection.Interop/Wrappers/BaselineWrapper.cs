@@ -16,6 +16,8 @@ namespace CivilConnection.Interop.Wrappers
         {
         }
 
+        public int Index => ComObject.Index;
+
         public double StartStation => ComObject.StartStation;
 
         public double EndStation => ComObject.EndStation;
@@ -54,6 +56,17 @@ namespace CivilConnection.Interop.Wrappers
         }
 
         public AlignmentWrapper OffsetAlignment => new AlignmentWrapper(ComObject.MainBaselineFeatureLines.OffsetAlignment);
+
+        public IEnumerable<string> CorridorCodes
+        {
+            get
+            {
+                foreach(var code in ComObject.MainBaselineFeatureLines.CodeNames)
+                {
+                    yield return (string)code;
+                }
+            }
+        }
 
         public IEnumerable<AlignmentWrapper> GetOffsetAlignments()
         {

@@ -16,7 +16,7 @@ namespace CivilConnection.Test
             {
                 TestConsole.Header("CivilConnection Test Runner");
 
-                var version = "2026";
+                var version = "2025";
 
                 var context = CivilContext.Create(version);
 
@@ -26,11 +26,15 @@ namespace CivilConnection.Test
 
                 var document = new DocumentWrapper(context.Host.Application.ActiveDocument);
 
-                AlignmentTests.Run(document);
+                //AlignmentTests.Run(document);
 
                 //GeometryTests.Run(document);
 
                 //Console.WriteLine(document.Version);
+
+                //CorridorTests.Run(document);
+
+                SurfaceTests.Run(document);
 
                 TestConsole.Success("All tests completed");
             }

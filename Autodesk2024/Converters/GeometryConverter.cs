@@ -72,6 +72,11 @@ namespace CivilConnection.Converters
             };
         }
 
+        public static Vector ToProtoVector(VectorData data)
+        {
+            return Vector.ByCoordinates(data.X, data.Y, data.Z);
+        }
+
         public static LineData ToLineData(Line line)
         {
             return new LineData
@@ -198,6 +203,16 @@ namespace CivilConnection.Converters
             return data;
         }
 
+        public static PlaneData ToPlaneData(Plane plane)
+        {
+            return new PlaneData
+            {
+                Origin = ToPointData(plane.Origin),
+                XAxis = ToVectorData(plane.XAxis),
+                YAxis = ToVectorData(plane.YAxis)
+            };
+        }
+
         public static Surface ToSurface(TriangleData triangleData)
         {
             var points = new List<Point>();
@@ -224,6 +239,33 @@ namespace CivilConnection.Converters
                 Vertices = vertices,
                 IsClosed = closed
             };
+        }
+
+        public static CoordinateSystemData ToCSData(CoordinateSystem coordinateSystem)
+        {
+            return new CoordinateSystemData
+            {
+                Origin = ToPointData(coordinateSystem.Origin),
+
+                XAxis = ToVectorData(coordinateSystem.XAxis),
+
+                YAxis = ToVectorData(coordinateSystem.YAxis),
+
+                ZAxis = ToVectorData(coordinateSystem.ZAxis),
+
+                XScaleFactor = coordinateSystem.XScaleFactor,
+                YScaleFactor = coordinateSystem.YScaleFactor,
+                ZScaleFactor = coordinateSystem.ZScaleFactor
+            };
+        }
+
+        public static CoordinateSystem ToDynamo(CoordinateSystemData data)
+        {
+            return CoordinateSystem.ByOriginVectors(
+                ToProtoPoint(data.Origin),
+                ToProtoVector(data.XAxis),
+                ToProtoVector(data.YAxis),
+                ToProtoVector(data.ZAxis));
         }
     }
 }

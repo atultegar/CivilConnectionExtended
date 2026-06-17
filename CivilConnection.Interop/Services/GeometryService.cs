@@ -1,8 +1,14 @@
-﻿using CivilConnection.Contracts.Models.Geometry;
+﻿using Autodesk.AECC.Interop.UiRoadway;
+using CivilConnection.Contracts.Helpers;
+using CivilConnection.Contracts.Models.Geometry;
+using CivilConnection.Interop.Models;
 using CivilConnection.Interop.Wrappers;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
+using System.IO;
 using System.Linq;
+using System.Numerics;
 
 namespace CivilConnection.Interop.Services
 {
@@ -44,6 +50,17 @@ namespace CivilConnection.Interop.Services
                 .Distinct(StringComparer.OrdinalIgnoreCase))
             {
                AddLayer(document, layer);
+            }
+        }
+
+        public void FreezeLayers(DocumentWrapper document, string layer)
+        {
+            var layers = document.ComObject.Layers;
+
+            foreach (var l in layers)
+            {
+                if (string.Equals(l.Name, layer, StringComparison.OrdinalIgnoreCase))
+                    l.Freeze = true;
             }
         }
 
@@ -148,6 +165,26 @@ namespace CivilConnection.Interop.Services
             return pline.Handle;
         }
 
+        public string AddLWPolylineByPoints(DocumentWrapper doc, IList<PointData> points, string layer)
+        {
+            AddLayer(doc, layer);
+
+            dynamic modelSpace = doc.ComObject.ModelSpace;
+
+            double[] vlist = new double[2 * points.Count];
+
+            for (int i = 0; i < points.Count; ++i)
+            {
+                vlist[2 * i] = points[i].X;
+                vlist[2 * i + 1] = points[i].Y;
+            }
+
+            var pl = modelSpace.AddLightWeightPolyline(vlist);
+            pl.Layer = layer;
+
+            return pl.Handle;
+        }
+
         public string AddCircle(DocumentWrapper document, CircleData circleData, string layer)
         {
             ValidateDocument(document);
@@ -237,7 +274,7 @@ namespace CivilConnection.Interop.Services
 
             string regionHandle = AddRegion(document, curveData, layer);
 
-            dynamic region = document.ComObject.HandleToObject(regionHandle);
+            dynamic region = document.HandleToObject(regionHandle);
 
             dynamic modelSpace = document.ComObject.ModelSpace;
 
@@ -275,85 +312,287 @@ namespace CivilConnection.Interop.Services
 
             dynamic modelSpace = document.ComObject.ModelSpace;
 
-            var targetSolids = GetSolids(modelSpace, layer);
+            var targetSolids = GetSolids(document, layer);
 
             if (!targetSolids.Any())
                 return false;
 
-            dynamic cutterSolid = null;
+            string cutterHandle = null;
             
             try
             {
-                string cutterHandle = ExtrudeCurve(document, closedCurve, height, layer);
+                cutterHandle = ExtrudeCurve(document, closedCurve, height, layer);
 
-                cutterSolid = document.ComObject.HandleToObject(cutterHandle);
+                if (string.IsNullOrWhiteSpace(cutterHandle))
+                    return false;
 
-                bool result = false;
+                var cutterSolid = document.GetSolidByHandle(cutterHandle);
 
-                foreach (dynamic targetSolid in targetSolids)
+                if (cutterSolid == null) 
+                    return false;
+
+                bool success = false;
+
+                foreach (var targetSolid in targetSolids)
                 {
-                    if (SubtractSolid(targetSolid, cutterSolid))
-                        result = true;
+                    try
+                    {
+                        if (!targetSolid.CheckInterference(cutterSolid))
+                            success = false;
+
+                        targetSolid.Subtract(cutterSolid);
+
+                        success = true;
+                    }
+                    catch
+                    {
+                        
+                    }
                 }
 
-                return result;
+                return success;
             }
             finally
             {
-                try
+                if (!string.IsNullOrWhiteSpace(cutterHandle))
                 {
-                    cutterSolid?.Delete();
-                }
-                catch { }
-                
+                    try
+                    {
+                        document.DeleteObject(cutterHandle);
+                    }
+                    catch { }
+                }                
             }                      
         }
 
-        public bool CutSolidBySolid(DocumentWrapper document, IGeometryData geometry, string layer)
+        public bool CutSolidBySolid(DocumentWrapper document, GeometryImportRequest request, string layer)
         {
             ValidateDocument(document);
 
+
             AddLayer(document, layer);
-
-            dynamic modelSpace = document.ComObject.ModelSpace;
-
-            var targetSolids = GetSolids(modelSpace, layer);
+                        
+            var targetSolids = GetSolids(document, layer);
 
             if (!targetSolids.Any())
                 return false;
 
-            dynamic cutterSolid = null;
+            string cutterHandle = null;
 
-            //try
-            //{
-            //    string cutterHandle = ExtrudeCurve(document, closedCurve, height, layer);
+            try
+            {
+                cutterHandle = ImportGeometry(document, request, layer).FirstOrDefault();
 
-            //    cutterSolid = document.HandleToObject(cutterHandle);
+                if (string.IsNullOrWhiteSpace(cutterHandle))
+                    return false;
 
-            //    bool result = false;
+                var cutterSolid = document.GetSolidByHandle(cutterHandle);
 
-            //    foreach (dynamic targetSolid in targetSolids)
-            //    {
-            //        if (SubtractSolid(targetSolid, cutterSolid))
-            //            result = true;
-            //    }
+                if (cutterSolid == null)
+                    return false;
 
-            //    return result;
-            //}
-            //finally
-            //{
-            //    try
-            //    {
-            //        cutterSolid?.Delete();
-            //    }
-            //    catch { }
+                bool success = false;
 
-            //}
+                foreach (var targetSolid in targetSolids)
+                {
+                    try
+                    {
+                        if (!targetSolid.CheckInterference(cutterSolid))
+                            success = false;
 
-            return false;
+                        targetSolid.Subtract(cutterSolid);
+
+                        success = true;
+                    }
+                    catch
+                    {
+
+                    }
+                }
+
+                return success;
+            }
+            finally
+            {
+                if (!string.IsNullOrWhiteSpace(cutterHandle))
+                {
+                    try
+                    {
+                        document.DeleteObject(cutterHandle);
+                    }
+                    catch { }
+                }
+            }
         }
 
+        public bool SliceSolidsByPlane(DocumentWrapper document, PlaneData plane, bool keepBothSides)
+        {
+            bool success = false;
 
+            var origin = plane.Origin;
+
+            var xPoint = new PointData
+            {
+                X = origin.X + plane.XAxis.X,
+                Y = origin.Y + plane.XAxis.Y,
+                Z = origin.Z + plane.XAxis.Z
+            };
+
+            var yPoint = new PointData
+            {
+                X = origin.X + plane.YAxis.X,
+                Y = origin.Y + plane.YAxis.Y,
+                Z = origin.Z + plane.YAxis.Z
+            };
+
+            foreach (var solid in document.GetSolids())
+            {
+                try
+                {
+                    solid.Slice(origin, xPoint, yPoint, keepBothSides);
+
+                    success = true;
+                }
+                catch (Exception ex)
+                {
+                    throw new Exception($"Error: {ex}");
+                }
+            }
+
+            return success;
+        }
+
+        public IList<string> ImportGeometry(DocumentWrapper document, GeometryImportRequest request, string layer)
+        {
+            if (document == null)
+                throw new ArgumentNullException(nameof(document));
+
+            if (request == null)
+                throw new ArgumentNullException(nameof(document));
+
+            AddLayer(document, layer);
+
+            var handles = new List<string>();
+
+            foreach (var item in request.Geometry ?? Enumerable.Empty<IGeometryData>())
+            {
+                string handle = item switch
+                {
+                    PointData point => AddDBPoint(document, point, layer),
+
+                    LineData line => AddLine(document, line, layer),
+
+                    ArcData arc => AddArc(document, arc, layer),
+
+                    CircleData circle => AddCircle(document, circle, layer),
+
+                    PolylineData polyline => AddPolyline(document, polyline, layer)
+                };
+
+                if (!string.IsNullOrWhiteSpace(handle))
+                {
+                    handles.Add(handle);
+                }
+            }
+
+            foreach (var satFile in request.SatFiles ?? Enumerable.Empty<string>())
+            {
+                handles.AddRange(
+                    ImportSAT(document, satFile, layer));
+            }
+
+            return handles;
+        }
+
+        public IList<string> ImportSAT(DocumentWrapper document, string satPath, string layer, bool deleteAfterImport = false)
+        {
+            if (!File.Exists(satPath))
+                throw new FileNotFoundException($"SAT file not found: {satPath}");
+
+            var handles = new List<string>();
+
+            try
+            {
+                var modelSpace = document.ModelSpace;
+
+                int startCount = modelSpace.Count;
+
+                document.Import(satPath, new PointData(), 1);
+
+                int endCount = modelSpace.Count;
+
+                for (int i = startCount; i < endCount; i++)
+                {
+                    dynamic entity = modelSpace.Item(i);
+
+                    string entityName = entity.EntityName;
+
+                    if (entityName.Contains("Solid") || entityName.Contains("Surface"))
+                    {
+                        entity.Layer = layer;
+
+                        handles.Add(entity.Handle);
+                    }
+                }
+
+                return handles;
+            }
+            finally
+            {
+                if (deleteAfterImport && File.Exists(satPath))
+                    File.Delete(satPath);
+            }
+        }
+
+        public void TransformEntity(DocumentWrapper document, string handle, CoordinateSystemData cs)
+        {
+            dynamic entity = document.HandleToObject(handle);
+
+            entity.TransformBy(cs.ToTransformMatrix());
+        }
+
+        public bool RotateByVector(DocumentWrapper doc, string handle, VectorData vector)
+        {
+            dynamic entity = doc.HandleToObject(handle);
+
+            var insertionPoint = new[]
+            {
+                (double)entity.InsertionPoint[0],
+                (double)entity.InsertionPoint[1],
+                (double)entity.InsertionPoint[2]
+            };
+
+            double angle = Math.Atan2(vector.Y, vector.X);
+
+            entity.Rotate(insertionPoint, angle);
+
+            return true;
+        }
+
+        // TODO: in progress
+        //public bool AlignToPlane(DocumentWrapper document, string handle, PlaneData plane)
+        //{
+
+        //    dynamic entity = document.HandleToObject(handle);
+
+        //    var insertionPoint = new[]
+        //    {
+        //        (double)entity.InsertionPoint[0],
+        //        (double)entity.InsertionPoint[1],
+        //        (double)entity.InsertionPoint[2]
+        //    };
+
+        //    var entityNormal = new VectorData
+        //    {
+        //        X = entity.Normal[0],
+        //        Y = entity.Normal[1],
+        //        Z = entity.Normal[2]
+        //    };
+
+        //    var targetNormal = VectorMath.Normalize(plane.)
+
+        //    return true;
+        //}
 
         #endregion
 
@@ -368,22 +607,19 @@ namespace CivilConnection.Interop.Services
             }
         }
 
-        private List<dynamic> GetSolids(dynamic modelSpace, string excludedLayer = null)
+        private List<SolidWrapper> GetSolids(DocumentWrapper document, string excludedLayer = null)
         {
-            var solids = new List<dynamic>();
+            var solids = new List<SolidWrapper>();
 
-            foreach (dynamic entity in modelSpace)
+            foreach (var solid in document.GetSolids())
             {
                 try
                 {
-                    if (!entity.EntityName.Contains("Solid"))
-                        continue;
-
                     if (!string.IsNullOrWhiteSpace(excludedLayer) &&
-                        entity.Layer.Equals(excludedLayer))
+                        solid.Layer.Equals(excludedLayer))
                         continue;
 
-                    solids.Add(entity);
+                    solids.Add(solid);
                 }
                 catch { }
             }
@@ -411,6 +647,11 @@ namespace CivilConnection.Interop.Services
                 throw new Exception($"Subtract solid failed: {ex.Message}");
             }
             
+        }
+
+        public double DegToRad(double angle)
+        {
+            return angle / 180 * Math.PI;
         }
 
         #endregion

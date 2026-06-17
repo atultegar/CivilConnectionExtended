@@ -5,9 +5,9 @@
     /// </summary>
     public class PointData
     {
-        public double X { get; set; }
-        public double Y { get; set; }
-        public double Z { get; set; }
+        public double X { get; set; } = 0;
+        public double Y { get; set; } = 0;
+        public double Z { get; set; } = 0;
 
         /// <summary>
         /// Returns the components of the vector as an array of doubles.
@@ -16,6 +16,11 @@
         public double[] ToArray()
         {
             return new[] { X, Y, Z };
+        }
+
+        public override string ToString()
+        {
+            return $"PointData(X = {X}, Y = {Y}, Z = {Z})";
         }
     }
 }
