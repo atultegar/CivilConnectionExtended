@@ -43,6 +43,7 @@ namespace CivilConnection
 
         private readonly LandXmlService _landXmlService;
         private readonly BaselineService _baselineService;
+        private readonly CorridorService _corridorService;
 
         #endregion
 
@@ -138,6 +139,7 @@ namespace CivilConnection
             _baselineRegions = baseline.BaselineRegions.Select(x => new BaselineRegion(this, x, index)).ToList();
             _landXmlService = new LandXmlService();
             _baselineService = new BaselineService();
+            _corridorService = new CorridorService();
         }
 
         #endregion
@@ -405,7 +407,8 @@ namespace CivilConnection
 
             try
             {
-                var data = _baselineService.GetFeaturelines(_baseline, code);
+                var xmlPath = _corridorService.GetFeaturelinesXmlPath(_baseline.Corridor);
+                var data = _baselineService.GetFeaturelines(_baseline, xmlPath, code);
 
                 return FeaturelineConverter.ToDynamo(data, this);
             }

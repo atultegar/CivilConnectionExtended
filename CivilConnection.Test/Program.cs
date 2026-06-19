@@ -16,7 +16,7 @@ namespace CivilConnection.Test
             {
                 TestConsole.Header("CivilConnection Test Runner");
 
-                var version = "2025";
+                var version = "2026";
 
                 var context = CivilContext.Create(version);
 
@@ -32,7 +32,7 @@ namespace CivilConnection.Test
 
                 //Console.WriteLine(document.Version);
 
-                //CorridorTests.Run(document);
+                CorridorTests.Run(document);
 
                 SurfaceTests.Run(document);
 

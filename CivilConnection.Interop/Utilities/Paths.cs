@@ -39,7 +39,7 @@ namespace CivilConnection.Interop.Utilities
                 Environment.GetEnvironmentVariable(
                     "TMP",
                     EnvironmentVariableTarget.User),
-                $"CorridorFeatureLines.xml_{corridorName}");  // Revit 2020 changed the path to the temp at a session level
+                $"CorridorFeatureLines_{corridorName}.xml");  // Revit 2020 changed the path to the temp at a session level
         }
 
         internal static void WaitForXml(params string[] paths)

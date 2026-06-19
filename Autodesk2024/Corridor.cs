@@ -141,8 +141,21 @@ namespace CivilConnection
             int index = 0;
             foreach (var b in corridor.Baselines)
             {
-                bls.Add(new Baseline(b, index, this));
-                ++index;
+                try
+                {
+                    Utils.Log($"Creating Baseline {index}");
+
+                    bls.Add(new Baseline(b, index, this));
+
+                    Utils.Log($"Baseline {index} created");
+
+                    ++index;
+                }
+                catch (System.Exception ex)
+                {
+                    Utils.Log($"Baseline ERROR: {ex}");
+                    throw;
+                }
             }
 
             _baselines = bls;
@@ -290,6 +303,8 @@ namespace CivilConnection
             Utils.LogMethodStart(this);
 
             var data = _corridorService.GetFeaturelines(_corridor);
+
+            Utils.Log($"Found {data.Count} featurelines");
 
             var output = FeaturelineConverter.ToDynamo(data, this.Baselines);
 

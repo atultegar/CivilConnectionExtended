@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace CivilConnection.Converters
 {
-    public static class AlignmentConverter
+    internal static class AlignmentConverter
     {
         public static Curve ToDynamo(AlignmentEntityData data)
         {

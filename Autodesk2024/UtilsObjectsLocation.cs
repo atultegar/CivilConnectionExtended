@@ -4588,10 +4588,10 @@ namespace CivilConnection
 
             Baseline b = corridor.Baselines[baselineIndex];
 
-            double station = 0;
-            double offset = 0;
+            var soe = b.Alignment.InternalElement.GetStationOffset(p.X, p.Y);
 
-            b._baseline.Alignment.StationOffset(p.X, p.Y, out station, out offset);
+            var station = soe.Station;
+            var offset = soe.Offset;
 
             double[] stations = b.Stations;
 

@@ -1,13 +1,8 @@
 ﻿using Autodesk.DesignScript.Geometry;
 using CivilConnection.Contracts.Models.Civil;
 using CivilConnection.Interop.Wrappers;
-using Dynamo.Controls;
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
 
 namespace CivilConnection.Converters
 {

@@ -2,7 +2,7 @@
 
 namespace CivilConnection.Converters
 {
-    public static class TransformConverter
+    internal static class TransformConverter
     {
         public static double[,] CreateCircleTransform(Circle circle)
         {

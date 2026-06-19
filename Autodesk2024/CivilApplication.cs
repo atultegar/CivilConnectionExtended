@@ -22,6 +22,7 @@ using Autodesk.Revit.DB;
 using CivilConnection.Contracts.Models;
 using CivilConnection.Interop.Context;
 using CivilConnection.Interop.Services;
+using RevitServices.Persistence;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -98,28 +99,32 @@ namespace CivilConnection
             Utils.Log($"CivilApplication started...");
             try
             {
-                _context = CivilContext.Create();
+                string revitVersion = DocumentManager.Instance.CurrentDBDocument.Application.VersionNumber.ToString();
 
+                var contexts = CivilContext.CreateAllContext();
+
+                Utils.Log($"Revit Version: {revitVersion}");
+
+                if (contexts.Count == 0)
+                    throw new Exception("No running Civil 3D instances found.");
+
+                _context = contexts.FirstOrDefault(x => x.Host.VersionInfo.Version.StartsWith(revitVersion)) ?? contexts.FirstOrDefault();
+
+                Utils.Log($"Selected Civil 3D Host: {_context.Host.VersionInfo.Version}");
+               
                 _documentService = new DocumentService();
 
                 Initialize();
             }
             catch (Exception ex) 
             {
-                Utils.Log($"ERROR: {ex}");
+                Utils.Log($"ERROR: {ex.Message}");
 
                 throw new Exception("Could not connect to a running Civil 3D instance", ex);
             }            
         }
-
-        /// <summary>
-        /// Creates the connection to a specific Civil 3D version.
-        /// </summary>
-        /// <param name="version">
-        /// Civil 3D version year.
-        /// Example: 2023, 2024, 2025...
-        /// </param>
-        public CivilApplication(string version)
+        
+        internal CivilApplication(string version)
         {
             Utils.InitializeLog();
             Utils.Log($"CivilApplication({version}) started...");
@@ -133,10 +138,22 @@ namespace CivilConnection
             }
             catch (Exception ex)
             {
-                Utils.Log($"ERROR: {ex}");
+                Utils.Log($"ERROR: {ex.Message}");
 
-                throw new Exception($"Could not connect to Civil 3D {version}");
+                throw new Exception($"Could not connect to Civil 3D {version}\n" + ex.Message, ex);
             }
+        }
+
+        /// <summary>
+        /// Creates the connection to a specific Civil 3D version.
+        /// </summary>
+        /// <param name="version">
+        /// Civil 3D version year.
+        /// Example: 2023, 2024, 2025...
+        /// </param>
+        public static CivilApplication ByVersion(string version)
+        {
+            return new CivilApplication(version);
         }
 
         #endregion

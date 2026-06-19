@@ -18,21 +18,14 @@ namespace CivilConnection.Interop.Services
 
         public CorridorService()
         {
-            //_baselineService = new BaselineService();
+            _baselineService = new BaselineService();
             _civilPythonService = new CivilPythonService();
             _landXmlService = new LandXmlService();
         }
 
         public IList<CorridorWrapper> GetCorridors(DocumentWrapper document)
         {
-            var output = new List<CorridorWrapper>();
-
-            foreach (var corridor in document.Corridors)
-            {
-                output.Add(corridor);
-            }
-
-            return output;
+            return document.Corridors.ToList();
         }
 
         public CorridorWrapper GetCorridorByName(DocumentWrapper document, string name)
@@ -84,14 +77,24 @@ namespace CivilConnection.Interop.Services
         {
             var result = new List<IList<IList<FeaturelineData>>>();
 
+            var xmlPath = GetFeaturelinesXmlPath(corridor);
+
             var codes = GetCodes(corridor);
 
             foreach (var baseline in corridor.Baselines)
             {
+
+                var baselineFeatureLines = new List<IList<FeaturelineData>>();
+
                 foreach (string code in codes)
                 {
-                    result.Add(_baselineService.GetFeaturelines(baseline, code));
+                    foreach (var region in _baselineService.GetFeaturelines(baseline, xmlPath, code))
+                    {
+                        baselineFeatureLines.Add(region);
+                    }
                 }
+
+                result.Add(baselineFeatureLines);
             }            
 
             return result;
@@ -101,9 +104,11 @@ namespace CivilConnection.Interop.Services
         {
             var result = new List<IList<IList<FeaturelineData>>>();
 
+            var xmlPath = GetFeaturelinesXmlPath(corridor);
+
             foreach (var baseline in corridor.Baselines)
             {
-                result.Add(_baselineService.GetFeaturelines(baseline, code));
+                result.Add(_baselineService.GetFeaturelines(baseline, xmlPath, code));
             }
 
             return result;

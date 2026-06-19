@@ -21,25 +21,9 @@ namespace CivilConnection.Test.Tests
 
             Console.WriteLine($"Corridors found: {corridors.Count}");
 
-            var selectedCorridor = service.GetCorridorByName(doc, "Corridor - (1)");
+            var featurelines = service.GetFeaturelines(corridors[0]);
 
-            Console.WriteLine(selectedCorridor);
-
-            var baselines = service.GetShapes(selectedCorridor);
-
-            foreach(var baseline in baselines)
-            {
-                foreach (var regions in baseline)
-                {
-                    foreach (var region in regions)
-                    {
-                        foreach (var point in region.BoundaryPoints)
-                        {
-                            Console.WriteLine(point);
-                        }
-                    }
-                }
-            }
+            Console.WriteLine(featurelines.Count);
 
         }
     }

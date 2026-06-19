@@ -3,22 +3,18 @@ using CivilConnection.Contracts.Models.Geometry;
 using CivilConnection.Interop.Wrappers;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Reflection;
 
 namespace CivilConnection.Interop.Services
 {
     public class BaselineService
     {
         private readonly CivilPythonService _civilPythonService;
-        private readonly CorridorService _corridorService;
         private readonly LandXmlService _landXmlService;
 
         public BaselineService()
         {
             _civilPythonService = new CivilPythonService();
-            _corridorService = new CorridorService();
             _landXmlService = new LandXmlService();
         }
 
@@ -66,9 +62,8 @@ namespace CivilConnection.Interop.Services
             return baseline.GetOffsetAlignments().ToList();
         }
 
-        public IList<IList<FeaturelineData>> GetFeaturelines(BaselineWrapper baseline, string code)
+        public IList<IList<FeaturelineData>> GetFeaturelines(BaselineWrapper baseline, string xmlPath, string code)
         {
-            string xmlPath = _corridorService.GetFeaturelinesXmlPath(baseline.Corridor);
 
             return new List<IList<FeaturelineData>>
             {

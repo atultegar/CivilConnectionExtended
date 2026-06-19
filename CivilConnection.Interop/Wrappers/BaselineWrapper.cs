@@ -12,11 +12,12 @@ namespace CivilConnection.Interop.Wrappers
 {
     public class BaselineWrapper : ComWrapper
     {
-        public BaselineWrapper(object baseline) : base(baseline)
+        public BaselineWrapper(object baseline, int index) : base(baseline)
         {
+            Index = index;
         }
 
-        public int Index => ComObject.Index;
+        public int Index { get; }
 
         public double StartStation => ComObject.StartStation;
 
@@ -26,13 +27,15 @@ namespace CivilConnection.Interop.Wrappers
         {
             get
             {
-                var stations = ComObject.GetSortedStations();
+                var seen = new HashSet<double>();
 
-                foreach (var station in stations)
+                foreach (double station in ((Array)ComObject.GetSortedStations()).Cast<double>())
                 {
-                    if (!stations.Contains(Math.Round(station, 3)))
+                    double rounded = Math.Round(station, 3);
+
+                    if (seen.Add(rounded))
                     {
-                        yield return station;
+                        yield return rounded;
                     }
                 }
             }

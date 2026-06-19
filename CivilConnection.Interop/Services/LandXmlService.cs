@@ -125,7 +125,7 @@ namespace CivilConnection.Interop.Services
             }
 
             foreach (XmlElement featurelineElement 
-                in baselineElement.GetElementsByTagName("Featureline")
+                in baselineElement.GetElementsByTagName("FeatureLine")
                 .Cast<XmlElement>()
                 .Where(x =>
                     string.Equals(x.Attributes["Code"]?.Value,

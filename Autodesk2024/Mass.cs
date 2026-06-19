@@ -1713,7 +1713,7 @@ namespace CivilConnection
                 throw new Exception(message);
             }
 
-            var aeccAlignment = alignment.InternalElement as Autodesk.AECC.Interop.Land.AeccAlignment;
+            var aeccAlignment = alignment.InternalElement;
 
             closedCurves = closedCurves.OrderBy(x => alignment.GetStationOffsetElevation(x.StartPoint)["Station"]).ToArray();  // make sure the shapes are sorted by station
 

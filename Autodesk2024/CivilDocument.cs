@@ -156,19 +156,25 @@ namespace CivilConnection
         /// <returns></returns>
         public IList<Corridor> GetCorridors()
         {
-            Utils.Log("CivilDocument.GetCorridors started...");
+            Utils.LogMethodStart(this);
 
-            // Cast the lambda to a delegate to avoid CS1977 when the call becomes dynamically dispatched
-            var selector = (Func<dynamic, Corridor>)(x => new Corridor(x));
+            try
+            {
+                var corridors = _corridorService
+                    .GetCorridors(_document)
+                    .Select(x => new Corridor(x))
+                    .ToList();
 
-            var output = _corridorService
-                .GetCorridors(_document)
-                .Select(selector)
-                .ToList();
+                Utils.LogMethodEnd(this);
 
-            Utils.Log("CivilDocument.GetCorridors completed.");
+                return corridors;
+            }
+            catch (Exception ex)
+            {
 
-            return output;
+                Utils.Log($"ERROR: {ex.Message}");
+                return new List<Corridor>();
+            }
         }
 
         /// <summary>
@@ -195,12 +201,9 @@ namespace CivilConnection
         {
             Utils.Log("CivilDocument.GetSurfaces started...");
 
-            // Cast the lambda to a delegate to avoid CS1977 when the call becomes dynamically dispatched
-            var selector = (Func<dynamic, CivilSurface>)(x => new CivilSurface(x));
-
             var output = _surfaceService
                 .GetSurfaces(_document)
-                .Select(selector)
+                .Select(x => new CivilSurface(x))
                 .ToList();
 
             Utils.Log("CivilDocument.GetSurfaces completed.");

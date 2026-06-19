@@ -19,9 +19,10 @@ namespace CivilConnection.Interop.Wrappers
         {
             get
             {
+                int index = 0;
                 foreach (dynamic baseline in ComObject.Baselines)
                 {
-                    yield return new BaselineWrapper(baseline);
+                    yield return new BaselineWrapper(baseline, index++);
                 }
             }
         }

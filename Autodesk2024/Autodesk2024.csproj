@@ -5,8 +5,8 @@
     <TargetFramework>net48</TargetFramework>
 	  <EnableDynamicLoading>true</EnableDynamicLoading>
     <Configurations>Debug;Release;2024;2025;2023;2026;2027;2027</Configurations>
-    <AssemblyVersion>7.3.0.0</AssemblyVersion>
-    <FileVersion>7.3.0.0</FileVersion>
+    <AssemblyVersion>8.0.0.0</AssemblyVersion>
+    <FileVersion>8.0.0.0</FileVersion>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
 	  <UseWindowsForms>true</UseWindowsForms>
 	  <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
@@ -118,7 +118,7 @@
 
 	<ItemGroup>
 		
-		<Reference Include="Acdbmgd">
+		<!--<Reference Include="Acdbmgd">
 			<HintPath>C:\Program Files\Autodesk\AutoCAD $(C3DVersion)\acdbmgd.dll</HintPath>
 			<EmbedInteropTypes>False</EmbedInteropTypes>
 			<Private>False</Private>
@@ -179,7 +179,7 @@
 			<EmbedInteropTypes>False</EmbedInteropTypes>
 			<Private>True</Private>
 			<SpecificVersion>False</SpecificVersion>
-		</Reference>
+		</Reference>-->
 		<Reference Include="CoreNodeModels">
 			<HintPath>$(DynRevitPath)\AddIns\DynamoForRevit\nodes\CoreNodeModels.dll</HintPath>
 			<Private>False</Private>

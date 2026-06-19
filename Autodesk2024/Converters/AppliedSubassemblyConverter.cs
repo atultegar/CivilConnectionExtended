@@ -1,17 +1,13 @@
 ﻿
 using Autodesk.DesignScript.Geometry;
 using CivilConnection.Contracts.Models.Civil;
-using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace CivilConnection.Converters
 {
-    public static class AppliedSubassemblyConverter
+    internal static class AppliedSubassemblyConverter
     {
-        public static AppliedSubassemblyShape ToDynamo(AppliedSubassemblyShapeData data)
+        internal static AppliedSubassemblyShape ToDynamo(AppliedSubassemblyShapeData data)
         {
             var points = data.BoundaryPoints
                 .Select(GeometryConverter.ToProtoPoint)
@@ -22,7 +18,7 @@ namespace CivilConnection.Converters
             return new AppliedSubassemblyShape(data.Name, surface, data.Codes, data.Station);
         }
 
-        public static AppliedSubassemblyLink ToDynamo(AppliedSubassemblyLinkData data)
+        internal static AppliedSubassemblyLink ToDynamo(AppliedSubassemblyLinkData data)
         {
             var points = data.Points
                 .Select(GeometryConverter.ToProtoPoint)

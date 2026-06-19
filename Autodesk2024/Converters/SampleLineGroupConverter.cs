@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace CivilConnection.Converters
 {
-    public static class SampleLineGroupConverter
+    internal static class SampleLineGroupConverter
     {
         public static Dictionary<string, object> ToDynamo(SampleLineGroupData data)
         {
