@@ -116,70 +116,7 @@
 	  <ProjectReference Include="..\CivilConnection.Interop\CivilConnection.Interop.csproj" />
 	</ItemGroup>
 
-	<ItemGroup>
-		
-		<!--<Reference Include="Acdbmgd">
-			<HintPath>C:\Program Files\Autodesk\AutoCAD $(C3DVersion)\acdbmgd.dll</HintPath>
-			<EmbedInteropTypes>False</EmbedInteropTypes>
-			<Private>False</Private>
-			<SpecificVersion>False</SpecificVersion>
-		</Reference>
-		
-		<Reference Include="AecPropDataMgd">
-			<HintPath>C:\Program Files\Autodesk\AutoCAD $(C3DVersion)\ACA\AecPropDataMgd.dll</HintPath>
-			<EmbedInteropTypes>False</EmbedInteropTypes>
-			<Private>False</Private>
-			<SpecificVersion>False</SpecificVersion>			
-		</Reference>
-		
-		<Reference Include="Autodesk.AEC.Interop.Base">
-			<HintPath>C:\Program Files\Autodesk\AutoCAD $(C3DVersion)\ACA\Autodesk.AEC.Interop.Base.dll</HintPath>
-			<EmbedInteropTypes>False</EmbedInteropTypes>
-			<Private>True</Private>
-			<SpecificVersion>False</SpecificVersion>
-		</Reference>
-		<Reference Include="Autodesk.AEC.Interop.UIBase">
-			<HintPath>C:\Program Files\Autodesk\AutoCAD $(C3DVersion)\ACA\Autodesk.AEC.Interop.UIBase.dll</HintPath>
-			<EmbedInteropTypes>False</EmbedInteropTypes>
-			<Private>True</Private>
-			<SpecificVersion>False</SpecificVersion>
-		</Reference>		
-		<Reference Include="Autodesk.AECC.Interop.Roadway">
-			<HintPath>C:\Program Files\Autodesk\AutoCAD $(C3DVersion)\C3D\Autodesk.AECC.Interop.Roadway.dll</HintPath>
-			<EmbedInteropTypes>False</EmbedInteropTypes>
-			<Private>True</Private>
-			<SpecificVersion>False</SpecificVersion>
-		</Reference>
-		<Reference Include="Autodesk.AECC.Interop.Land">
-			<HintPath>C:\Program Files\Autodesk\AutoCAD $(C3DVersion)\C3D\Autodesk.AECC.Interop.Land.dll</HintPath>
-			<EmbedInteropTypes>False</EmbedInteropTypes>
-			<Private>True</Private>
-			<SpecificVersion>False</SpecificVersion>
-		</Reference>		
-		<Reference Include="Autodesk.AECC.Interop.UiLand">
-			<HintPath>C:\Program Files\Autodesk\AutoCAD $(C3DVersion)\C3D\Autodesk.AECC.Interop.UiLand.dll</HintPath>
-			<EmbedInteropTypes>False</EmbedInteropTypes>
-			<Private>True</Private>
-			<SpecificVersion>False</SpecificVersion>
-		</Reference>
-		<Reference Include="Autodesk.AECC.Interop.UiRoadway">
-			<HintPath>C:\Program Files\Autodesk\AutoCAD $(C3DVersion)\C3D\Autodesk.AECC.Interop.UiRoadway.dll</HintPath>
-			<EmbedInteropTypes>False</EmbedInteropTypes>
-			<Private>True</Private>
-			<SpecificVersion>False</SpecificVersion>
-		</Reference>
-		<Reference Include="Autodesk.AutoCAD.Interop">
-			<HintPath>C:\Program Files\Autodesk\AutoCAD $(C3DVersion)\Autodesk.AutoCAD.Interop.dll</HintPath>
-			<EmbedInteropTypes>False</EmbedInteropTypes>
-			<Private>True</Private>
-			<SpecificVersion>False</SpecificVersion>
-		</Reference>
-		<Reference Include="Autodesk.AutoCAD.Interop.Common">
-			<HintPath>C:\Program Files\Autodesk\AutoCAD $(C3DVersion)\Autodesk.AutoCAD.Interop.Common.dll</HintPath>
-			<EmbedInteropTypes>False</EmbedInteropTypes>
-			<Private>True</Private>
-			<SpecificVersion>False</SpecificVersion>
-		</Reference>-->
+	<ItemGroup>		
 		<Reference Include="CoreNodeModels">
 			<HintPath>$(DynRevitPath)\AddIns\DynamoForRevit\nodes\CoreNodeModels.dll</HintPath>
 			<Private>False</Private>
