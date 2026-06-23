@@ -92,7 +92,7 @@ namespace CivilConnection
         /// The GeometryStations.
         /// </value>
         /// 
-        public double[] GeometryStations => _data.GeometryStations?.ToArray() ?? []; 
+        public double[] GeometryStations => _data.GeometryStations?.ToArray() ?? Array.Empty<double>(); 
 
         /// <summary>
         /// Gets the stations of the points of intersection.
@@ -101,7 +101,7 @@ namespace CivilConnection
         /// The PIStations.
         /// </value>
         /// 
-        public double[] PIStations => _data.PIStations?.ToArray() ?? [];
+        public double[] PIStations => _data.PIStations?.ToArray() ?? Array.Empty<double>();
 
         /// <summary>
         /// Gets the stations of the points of superelevation transition.
@@ -110,7 +110,7 @@ namespace CivilConnection
         /// The SuperTransStations.
         /// </value>
         /// 
-        public double[] SuperTransStations => _data.SuperTransitionStations?.ToArray() ?? [];
+        public double[] SuperTransStations => _data.SuperTransitionStations?.ToArray() ?? Array.Empty<double>();
 
         /// <summary>
         /// Gets the stations of the station equations
@@ -119,7 +119,7 @@ namespace CivilConnection
         /// The Eqaution Stations
         /// </value>
         /// 
-        public double[] EquationStations => _data.EquationStations?.ToArray() ?? [];
+        public double[] EquationStations => _data.EquationStations?.ToArray() ?? Array.Empty<double>();
 
         /// <summary>
         /// Gets the station ahead based on station equations
@@ -127,7 +127,7 @@ namespace CivilConnection
         /// <value>
         /// The Station Ahead at each Station Equation
         /// </value>
-        public double[] StationAhead => _data.StationAhead?.ToArray() ?? [];
+        public double[] StationAhead => _data.StationAhead?.ToArray() ?? Array.Empty<double>();
 
         #endregion
 

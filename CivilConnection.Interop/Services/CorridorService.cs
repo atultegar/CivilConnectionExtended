@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using CivilConnection.Interop.Utilities;
+using CivilConnection.Contracts.Validation;
 
 namespace CivilConnection.Interop.Services
 {    
@@ -189,6 +190,21 @@ namespace CivilConnection.Interop.Services
             }
         }
 
+        public IList<AppliedSubassemblyShapeData> GetShapes(CorridorWrapper corridor, int baselineIndex, int regionIndex)
+        {
+            var shapes = GetShapes(corridor);
+
+            if (baselineIndex < 0 || baselineIndex >= shapes.Count)
+                return new List<AppliedSubassemblyShapeData>();
+
+            var baseline = shapes[baselineIndex];
+
+            if (regionIndex < 0 || regionIndex >= baseline.Count)
+                return new List<AppliedSubassemblyShapeData>();
+
+            return baseline[regionIndex];
+        }
+
         public IList<IList<IList<AppliedSubassemblyLinkData>>> GetLinks(CorridorWrapper corridor)
         {
             var xmlPath = ExportLinksXml(corridor);
@@ -202,6 +218,21 @@ namespace CivilConnection.Interop.Services
             {
                 return new List<IList<IList<AppliedSubassemblyLinkData>>>();
             }
+        }
+
+        public IList<AppliedSubassemblyLinkData> GetLinks(CorridorWrapper corridor, int baselineIndex, int regionIndex)
+        {
+            var links = GetLinks(corridor);
+
+            if (baselineIndex < 0 || baselineIndex >= links.Count)
+                return new List<AppliedSubassemblyLinkData>();
+
+            var baseline = links[baselineIndex];
+
+            if (regionIndex < 0 || regionIndex >= baseline.Count)
+                return new List<AppliedSubassemblyLinkData>();
+
+            return baseline[regionIndex];
         }
 
         public IList<CorridorSurfaceData> GetCorridorSurfaces(CorridorWrapper corridor)
@@ -253,11 +284,7 @@ namespace CivilConnection.Interop.Services
 
             string nullXmlPath = Utilities.Paths.GetCorridorFeaturelinesXmlPath();
 
-            if (!_civilPythonService.IsInstalled(corridor.Document.Version))
-            {
-                throw new InvalidOperationException(
-                    $"CivilPython {corridor.Document.Version} is not installed.");
-            }
+            CivilPythonValidator.EnsureInstalled(corridor.Document.Version);
 
             string command = $"-ExportCorridorFeatureLinesToXml\n{corridor.Handle}\n";
 
@@ -268,11 +295,7 @@ namespace CivilConnection.Interop.Services
         {
             var document = corridor.Document;
 
-            if (!_civilPythonService.IsInstalled(corridor.Document.Version))
-            {
-                throw new InvalidOperationException(
-                    $"CivilPython {corridor.Document.Version} is not installed.");
-            }
+            CivilPythonValidator.EnsureInstalled(corridor.Document.Version);
 
             document.SendCommand(command);
 

@@ -105,14 +105,23 @@ namespace CivilConnection
 
         private static SubassemblyParameterType ConvertType(ParameterType type)
         {
-            return type switch
+            switch (type)
             {
-                ParameterType.Bool => SubassemblyParameterType.Bool,
-                ParameterType.Double => SubassemblyParameterType.Double,
-                ParameterType.Long => SubassemblyParameterType.Long,
-                ParameterType.String => SubassemblyParameterType.String,
-                _ => throw new NotSupportedException($"Unsupported parameter type: {type}")
-            };
+                case ParameterType.Bool:
+                    return SubassemblyParameterType.Bool;
+
+                case ParameterType.Double: 
+                    return SubassemblyParameterType.Double;
+
+                case ParameterType.Long: 
+                    return SubassemblyParameterType.Long;
+
+                case ParameterType.String: 
+                    return SubassemblyParameterType.String;
+
+                default:
+                    throw new NotSupportedException($"Unsupported parameter type: {type}");
+            }            
         }
 
         #endregion

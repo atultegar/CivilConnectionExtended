@@ -13,7 +13,7 @@
 // permissions and limitations under the License.
 using Autodesk.DesignScript.Runtime;
 using Autodesk.Revit.DB;
-
+using CivilConnection.Extensions;
 using Revit.GeometryConversion;
 
 using RevitServices.Persistence;
@@ -179,7 +179,7 @@ namespace CivilConnection
         /// <param name="type">The type.</param>
         protected void InternalSetMEPCurveType(Autodesk.Revit.DB.MEPCurveType type)
         {
-            if (InternalMEPCurve.GetTypeId().Value.Equals(type.Id.Value))
+            if (InternalMEPCurve.GetTypeId().GetValue().Equals(type.Id.GetValue()))
                 return;
 
             TransactionManager.Instance.EnsureInTransaction(DocumentManager.Instance.CurrentDBDocument);
@@ -204,7 +204,7 @@ namespace CivilConnection
             TransactionManager.Instance.TransactionTaskDone();
         }
 
-        #endregion
+#endregion
 
         #region PUBLIC METHODS
         /// <summary>

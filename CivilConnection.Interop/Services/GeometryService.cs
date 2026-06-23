@@ -1,14 +1,10 @@
-﻿using Autodesk.AECC.Interop.UiRoadway;
-using CivilConnection.Contracts.Helpers;
-using CivilConnection.Contracts.Models.Geometry;
+﻿using CivilConnection.Contracts.Models.Geometry;
 using CivilConnection.Interop.Models;
 using CivilConnection.Interop.Wrappers;
 using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.IO;
 using System.Linq;
-using System.Numerics;
 
 namespace CivilConnection.Interop.Services
 {

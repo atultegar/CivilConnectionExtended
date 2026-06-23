@@ -18,6 +18,7 @@ using Autodesk.Revit.DB.Electrical;
 using Autodesk.Revit.DB.Mechanical;
 using Autodesk.Revit.DB.Plumbing;
 using Autodesk.Revit.UI;
+using CivilConnection.Extensions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Revit.GeometryConversion;
@@ -26,8 +27,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Xml;
 using System.Windows;
+using System.Xml;
 using Point = Autodesk.DesignScript.Geometry.Point;
 using Vector = Autodesk.DesignScript.Geometry.Vector;
 
@@ -246,7 +247,7 @@ namespace CivilConnection
 
                 if (fi.Location is LocationPoint)
                 {
-                    if (e.Category.Id.Value.Equals((int)BuiltInCategory.OST_Columns) || e.Category.Id.Value.Equals((int)BuiltInCategory.OST_StructuralColumns))
+                    if (e.Category.Id.GetValue().Equals((int)BuiltInCategory.OST_Columns) || e.Category.Id.GetValue().Equals((int)BuiltInCategory.OST_StructuralColumns))
                     {
                         var lineObject = xmlDoc.CreateElement("LineObject");
                         lineObject.InnerText = e.UniqueId;
@@ -255,10 +256,10 @@ namespace CivilConnection
                     }
                     else
                     {
-                        if (!e.Category.Id.Value.Equals((int)BuiltInCategory.OST_PipeFitting) ||
-                            !e.Category.Id.Value.Equals((int)BuiltInCategory.OST_DuctFitting) ||
-                            !e.Category.Id.Value.Equals((int)BuiltInCategory.OST_ConduitFitting) ||
-                            !e.Category.Id.Value.Equals((int)BuiltInCategory.OST_CableTrayFitting))  // 1.1.1
+                        if (!e.Category.Id.GetValue().Equals((int)BuiltInCategory.OST_PipeFitting) ||
+                            !e.Category.Id.GetValue().Equals((int)BuiltInCategory.OST_DuctFitting) ||
+                            !e.Category.Id.GetValue().Equals((int)BuiltInCategory.OST_ConduitFitting) ||
+                            !e.Category.Id.GetValue().Equals((int)BuiltInCategory.OST_CableTrayFitting))  // 1.1.1
                         {
                             var pointObject = xmlDoc.CreateElement("PointObject");
                             pointObject.InnerText = e.UniqueId;
@@ -1197,7 +1198,7 @@ namespace CivilConnection
                             {
                                 Revit.Elements.Floor floor = element as Revit.Elements.Floor;
                                 Revit.Elements.FloorType ft = Revit.Elements.FloorType.ByName(floor.Name);
-                                var levelId = element.InternalElement.Parameters.Cast<Parameter>().First(x => x.Id.Value.Equals((int)BuiltInParameter.LEVEL_PARAM)).AsElementId();  // 1.1.0
+                                var levelId = element.InternalElement.Parameters.Cast<Parameter>().First(x => x.Id.GetValue().Equals((int)BuiltInParameter.LEVEL_PARAM)).AsElementId();  // 1.1.0
                                 var levelRvt = doc.GetElement(levelId) as Level;  // 1.1.0
                                 var level = Revit.Elements.InternalUtilities.ElementQueries.OfElementType(typeof(Level)).Cast<Revit.Elements.Level>().First(x => x.Name == levelRvt.Name);  // 1.1.0
 
@@ -1479,23 +1480,23 @@ namespace CivilConnection
 
                                     lp.Move(point.ToXyz() - lp.Point);
 
-                                    ElementId baseId = element.InternalElement.Parameters.Cast<Parameter>().First(x => x.Id.Value.Equals((int)BuiltInParameter.FAMILY_BASE_LEVEL_PARAM)).AsElementId();
+                                    ElementId baseId = element.InternalElement.Parameters.Cast<Parameter>().First(x => x.Id.GetValue().Equals((int)BuiltInParameter.FAMILY_BASE_LEVEL_PARAM)).AsElementId();
 
                                     Level bl = (Level)doc.GetElement(baseId);
 
                                     double bh = bl.Elevation;
 
-                                    ElementId topId = element.InternalElement.Parameters.Cast<Parameter>().First(x => x.Id.Value.Equals((int)BuiltInParameter.FAMILY_TOP_LEVEL_PARAM)).AsElementId();
+                                    ElementId topId = element.InternalElement.Parameters.Cast<Parameter>().First(x => x.Id.GetValue().Equals((int)BuiltInParameter.FAMILY_TOP_LEVEL_PARAM)).AsElementId();
 
                                     Level tl = (Level)doc.GetElement(topId);
 
                                     double th = tl.Elevation;
 
                                     element.InternalElement.Parameters.Cast<Parameter>()
-                                        .First(x => x.Id.Value.Equals((int)BuiltInParameter.FAMILY_BASE_LEVEL_OFFSET_PARAM)).Set(Utils.MToFeet(elevation) - bh);
+                                        .First(x => x.Id.GetValue().Equals((int)BuiltInParameter.FAMILY_BASE_LEVEL_OFFSET_PARAM)).Set(Utils.MToFeet(elevation) - bh);
 
                                     element.InternalElement.Parameters.Cast<Parameter>()
-                                        .First(x => x.Id.Value.Equals((int)BuiltInParameter.FAMILY_TOP_LEVEL_OFFSET_PARAM)).Set(Utils.MToFeet(endElevation) - th);
+                                        .First(x => x.Id.GetValue().Equals((int)BuiltInParameter.FAMILY_TOP_LEVEL_OFFSET_PARAM)).Set(Utils.MToFeet(endElevation) - th);
                                 } // Vertical columns
                                 else
                                 {
@@ -2073,7 +2074,7 @@ namespace CivilConnection
             {
                 foreach (Connector eCon in connector.AllRefs)
                 {
-                    if (eCon.Owner.Id.Value != p.Id.Value)
+                    if (eCon.Owner.Id.GetValue() != p.Id.GetValue())
                     {
                         if (eCon.Owner is MEPCurve)
                         {
@@ -2122,8 +2123,8 @@ namespace CivilConnection
                         {
                             foreach (Connector qCon in GetConnectorManager(eCon.Owner).Connectors)
                             {
-                                if (qCon.Owner.Id.Value != eCon.Owner.Id.Value &&
-                                   qCon.Owner.Id.Value != p.Id.Value)
+                                if (qCon.Owner.Id.GetValue() != eCon.Owner.Id.GetValue() &&
+                                   qCon.Owner.Id.GetValue() != p.Id.GetValue())
                                 {
                                     if (qCon.Owner is MEPCurve)
                                     {
@@ -2198,7 +2199,7 @@ namespace CivilConnection
                 .Cast<FamilyInstance>()
                 .Where(x => x.ViewSpecific == false &&
                     x.Location is LocationPoint &&
-                    x.Category.Id.Value.Equals(categoryId));
+                    x.Category.Id.GetValue().Equals(categoryId));
 
             object[][] data = new object[instances.Count()][];
 
@@ -2272,7 +2273,7 @@ namespace CivilConnection
                 ElementId typeId = fi.Symbol.Id;
                 string familyName = fi.Symbol.FamilyName;
                 string typeName = fi.Symbol.Name;
-                Parameter pMark = fi.Parameters.Cast<Parameter>().First(g => g.Id.Value.Equals(Convert.ToInt32(BuiltInParameter.ALL_MODEL_MARK)));
+                Parameter pMark = fi.Parameters.Cast<Parameter>().First(g => g.Id.GetValue().Equals(Convert.ToInt32(BuiltInParameter.ALL_MODEL_MARK)));
 
                 string mark = "";
                 string corridorName = "";
@@ -2592,7 +2593,7 @@ namespace CivilConnection
                     .ToString();
             }
 
-            var typeName = Revit.Elements.ElementSelector.ByElementId(typeId.Value).Name;
+            var typeName = Revit.Elements.ElementSelector.ByElementId((int)typeId.GetValue()).Name;
             var mark = mep.GetParameterValueByName("Mark");
 
             var corridorName = mep.GetParameterValueByName(ADSK_Parameters.Instance.Corridor.Name);
@@ -2839,7 +2840,7 @@ namespace CivilConnection
 
                         foreach (Category catEB in eb.Categories)
                         {
-                            if (catEB.Id.Value.Equals(cat.Id.Value))
+                            if (catEB.Id.GetValue().Equals(cat.Id.GetValue()))
                             {
                                 if (type == iter.Key.GetDataType())
                                 {
@@ -2925,18 +2926,18 @@ namespace CivilConnection
                 {
 
                     if (//cat.Id.IntegerValue.Equals((int)BuiltInCategory.OST_PipeSegments) ||
-                        cat.Id.Value.Equals((int)BuiltInCategory.OST_PipeCurves) ||
-                        cat.Id.Value.Equals((int)BuiltInCategory.OST_FlexPipeCurves) ||
-                        cat.Id.Value.Equals((int)BuiltInCategory.OST_DuctCurves) ||
-                        cat.Id.Value.Equals((int)BuiltInCategory.OST_FlexDuctCurves) ||
-                        cat.Id.Value.Equals((int)BuiltInCategory.OST_PlaceHolderDucts) ||
-                        cat.Id.Value.Equals((int)BuiltInCategory.OST_PlaceHolderPipes) ||
-                        cat.Id.Value.Equals((int)BuiltInCategory.OST_CableTray) ||
-                        cat.Id.Value.Equals((int)BuiltInCategory.OST_Conduit) ||
-                        cat.Id.Value.Equals((int)BuiltInCategory.OST_StructuralFraming) ||
-                        cat.Id.Value.Equals((int)BuiltInCategory.OST_StructuralColumns) ||
-                        cat.Id.Value.Equals((int)BuiltInCategory.OST_Columns) ||
-                        cat.Id.Value.Equals((int)BuiltInCategory.OST_Walls))
+                        cat.Id.GetValue().Equals((int)BuiltInCategory.OST_PipeCurves) ||
+                        cat.Id.GetValue().Equals((int)BuiltInCategory.OST_FlexPipeCurves) ||
+                        cat.Id.GetValue().Equals((int)BuiltInCategory.OST_DuctCurves) ||
+                        cat.Id.GetValue().Equals((int)BuiltInCategory.OST_FlexDuctCurves) ||
+                        cat.Id.GetValue().Equals((int)BuiltInCategory.OST_PlaceHolderDucts) ||
+                        cat.Id.GetValue().Equals((int)BuiltInCategory.OST_PlaceHolderPipes) ||
+                        cat.Id.GetValue().Equals((int)BuiltInCategory.OST_CableTray) ||
+                        cat.Id.GetValue().Equals((int)BuiltInCategory.OST_Conduit) ||
+                        cat.Id.GetValue().Equals((int)BuiltInCategory.OST_StructuralFraming) ||
+                        cat.Id.GetValue().Equals((int)BuiltInCategory.OST_StructuralColumns) ||
+                        cat.Id.GetValue().Equals((int)BuiltInCategory.OST_Columns) ||
+                        cat.Id.GetValue().Equals((int)BuiltInCategory.OST_Walls))
                     {
                         cs.Insert(cat);
                     }
@@ -3056,7 +3057,7 @@ namespace CivilConnection
 
                             Family family = fi.Symbol.Family;
                             FamilySymbol type = fi.Symbol;
-                            Parameter pMark = fi.Parameters.Cast<Parameter>().First(p => p.Id.Value.Equals(Convert.ToInt32(BuiltInParameter.ALL_MODEL_MARK)));
+                            Parameter pMark = fi.Parameters.Cast<Parameter>().First(p => p.Id.GetValue().Equals(Convert.ToInt32(BuiltInParameter.ALL_MODEL_MARK)));
 
                             if (null != data[i][3])
                             {
@@ -4423,9 +4424,9 @@ namespace CivilConnection
                  .OfClass(typeof(RevitLinkInstance))
                  .WhereElementIsNotElementType()
                  .Cast<RevitLinkInstance>()
-                 .Where(x => x.GetTypeId().Value.Equals(revitLinkType.InternalElement.Id.Value)))
+                 .Where(x => x.GetTypeId().GetValue().Equals(revitLinkType.InternalElement.Id.GetValue())))
             {
-                if (i.Parameters.Cast<Parameter>().First(x => x.Id.Value.Equals((int)BuiltInParameter.RVT_LINK_INSTANCE_NAME)).AsString() == name)
+                if (i.Parameters.Cast<Parameter>().First(x => x.Id.GetValue().Equals((int)BuiltInParameter.RVT_LINK_INSTANCE_NAME)).AsString() == name)
                 {
                     found = true;
                     rli = i;
@@ -4461,7 +4462,7 @@ namespace CivilConnection
 
             location.Rotate(Autodesk.Revit.DB.Line.CreateBound(origin.ToXyz(), origin.ToXyz() + XYZ.BasisZ), -angle);
 
-            rli.Parameters.Cast<Parameter>().First(x => x.Id.Value.Equals((int)BuiltInParameter.RVT_LINK_INSTANCE_NAME)).Set(name);
+            rli.Parameters.Cast<Parameter>().First(x => x.Id.GetValue().Equals((int)BuiltInParameter.RVT_LINK_INSTANCE_NAME)).Set(name);
 
             RevitServices.Transactions.TransactionManager.Instance.TransactionTaskDone();
 
@@ -4787,7 +4788,7 @@ namespace CivilConnection
                 Utils.Log(string.Format("ERROR: {0}", ex.Message));
             }
 
-            Utils.Log(string.Format("New wall created {0}...", newWall.Id.Value));
+            Utils.Log(string.Format("New wall created {0}...", newWall.Id.GetValue()));
 
             newWall.WallType = rvtWallType;
 
@@ -4799,7 +4800,7 @@ namespace CivilConnection
             try
             {
 
-                newWall.Parameters.Cast<Parameter>().First(x => x.Id.Value == (int)BuiltInParameter.WALL_BASE_OFFSET).Set(min - level.Elevation);
+                newWall.Parameters.Cast<Parameter>().First(x => x.Id.GetValue() == (int)BuiltInParameter.WALL_BASE_OFFSET).Set(min - level.Elevation);
 
                 Utils.Log(string.Format("WALL_BASE_OFFSET Set...", ""));
             }
@@ -4810,7 +4811,7 @@ namespace CivilConnection
 
             try
             {
-                newWall.Parameters.Cast<Parameter>().First(x => x.Id.Value == (int)BuiltInParameter.WALL_HEIGHT_TYPE).Set(ElementId.InvalidElementId);
+                newWall.Parameters.Cast<Parameter>().First(x => x.Id.GetValue() == (int)BuiltInParameter.WALL_HEIGHT_TYPE).Set(ElementId.InvalidElementId);
 
                 Utils.Log(string.Format("WALL_HEIGHT_TYPE Set...", ""));
             }
@@ -4821,7 +4822,7 @@ namespace CivilConnection
 
             try
             {
-                newWall.Parameters.Cast<Parameter>().First(x => x.Id.Value == (int)BuiltInParameter.WALL_USER_HEIGHT_PARAM).Set(max - min);
+                newWall.Parameters.Cast<Parameter>().First(x => x.Id.GetValue() == (int)BuiltInParameter.WALL_USER_HEIGHT_PARAM).Set(max - min);
 
                 Utils.Log(string.Format("WALL_USER_HEIGHT_PARAM Set...", ""));
             }
@@ -4832,7 +4833,7 @@ namespace CivilConnection
 
             try
             {
-                newWall.Parameters.Cast<Parameter>().First(x => x.Id.Value == (int)BuiltInParameter.WALL_KEY_REF_PARAM).Set(0);
+                newWall.Parameters.Cast<Parameter>().First(x => x.Id.GetValue() == (int)BuiltInParameter.WALL_KEY_REF_PARAM).Set(0);
 
                 Utils.Log(string.Format("WALL_KEY_REF_PARAM Set...", ""));
             }

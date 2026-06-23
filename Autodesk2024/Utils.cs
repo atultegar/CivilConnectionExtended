@@ -23,9 +23,7 @@ using System.IO;
 using Autodesk.DesignScript.Runtime;
 using Autodesk.DesignScript.Geometry;
 using System.Text.RegularExpressions;
-using System.Windows.Forms;
 using System.Runtime.CompilerServices;
-using CivilConnection.Interop.Services;
 
 namespace CivilConnection
 {
@@ -230,66 +228,6 @@ namespace CivilConnection
                 return false;
             }
         }
-
-        /// <summary>
-        /// Checks whether the required CivilPython library is installed and available for use.
-        /// </summary>
-        /// <remarks>If the library is not found, a warning message is displayed to the user and a log
-        /// entry is created. This method should be called before attempting to use CivilPython functionality to ensure
-        /// the required dependency is present.</remarks>
-        /// <returns>true if the CivilPython library is installed; otherwise, false.</returns>
-        internal static bool EnsureCivilPythonInstalled()
-        {
-            string version = GetCivilPythonVersion();
-
-            var civilPythonServie = new CivilPythonService();
-
-            if (civilPythonServie.IsInstalled(version))
-                return true;
-
-            var civilPythonDownloadLocation = "https://github.com/atultegar/CivilPython/releases";
-
-            string message = $"CivilPython {version} is not installed.\n\n" +
-                $"Please download it from {civilPythonDownloadLocation}\n\n" +
-                $"(Link copied to your clipboard)";
-
-            Utils.Log(message);
-
-            MessageBox.Show(
-                message,
-                "CivilPython not installed",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Warning);
-
-            Clipboard.SetText(civilPythonDownloadLocation);
-
-            return false;
-        }
-
-
-        internal static string GetCivilPythonVersion()
-        {
-#if C2023
-            return "2023";
-
-#elif C2024
-            return "2024";
-
-#elif C2025
-            return "2025";
-
-#elif C2026
-            return "2026";
-
-
-#elif C2027
-            return "2027";
-
-#else
-            throw new NotSupportedException("Unsupported Civil 3D version.");
-#endif
-        }
-
         
 
         internal static void DisposeObjects(params DesignScriptEntity[] geometry)

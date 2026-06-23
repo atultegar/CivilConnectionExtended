@@ -22,6 +22,7 @@ using System.IO;
 using System.Collections.Generic;
 using System;
 using System.Linq;
+using CivilConnection.Extensions;
 
 namespace CivilConnection
 {
@@ -328,7 +329,7 @@ namespace CivilConnection
                 {
                     family = f;
 
-                    Utils.Log(string.Format("Family Found: {0}", family.Id.Value));
+                    Utils.Log(string.Format("Family Found: {0}", family.Id.GetValue()));
 
                     break;
                 }
@@ -342,11 +343,11 @@ namespace CivilConnection
                        .OfClass(typeof(Autodesk.Revit.DB.FamilyInstance))
                        .WhereElementIsNotElementType()
                        .Cast<Autodesk.Revit.DB.FamilyInstance>()
-                       .Where(x => x.Symbol.Family.Id.Value.Equals(famId.Value)))
+                       .Where(x => x.Symbol.Family.Id.GetValue().Equals(famId.GetValue())))
                 {
                     rvtFI = rfi;
 
-                    Utils.Log(string.Format("Family Instance Found: {0}", rfi.Id.Value));
+                    Utils.Log(string.Format("Family Instance Found: {0}", rfi.Id.GetValue()));
 
                     break;
                 }
@@ -570,7 +571,7 @@ namespace CivilConnection
 
             Revit.Elements.FamilyType fs = Revit.Elements.FamilyType.ByFamilyNameAndTypeName(family.Name, family.Name);
 
-            Utils.Log(string.Format("Family Loaded: {0}", family.Id.Value));
+            Utils.Log(string.Format("Family Loaded: {0}", family.Id.GetValue()));
 
             if (!found && rvtFI == null)
             {
@@ -580,7 +581,7 @@ namespace CivilConnection
 
                 fi = Revit.Elements.FamilyInstance.ByPoint(fs, point);
 
-                Utils.Log(string.Format("Family Instance Created: {0}", fi.InternalElement.Id.Value));
+                Utils.Log(string.Format("Family Instance Created: {0}", fi.InternalElement.Id.GetValue()));
             }
             else
             {
@@ -599,7 +600,7 @@ namespace CivilConnection
                     Utils.Log(string.Format("Family Query returned null...", ""));
                 }
 
-                Utils.Log(string.Format("Family Instance Updated: {0}", rvtFI.Id.Value));
+                Utils.Log(string.Format("Family Instance Updated: {0}", rvtFI.Id.GetValue()));
             }
 
             TransactionManager.Instance.TransactionTaskDone();
@@ -874,10 +875,10 @@ namespace CivilConnection
 
                                         if (isVoid)
                                         {
-                                            ffe.Parameters.Cast<Autodesk.Revit.DB.Parameter>().First(x => x.Id.Value.Equals((int)BuiltInParameter.ELEMENT_IS_CUTTING)).Set(1);
+                                            ffe.Parameters.Cast<Autodesk.Revit.DB.Parameter>().First(x => x.Id.GetValue().Equals((int)BuiltInParameter.ELEMENT_IS_CUTTING)).Set(1);
 
                                             famDoc.OwnerFamily.Parameters.Cast<Autodesk.Revit.DB.Parameter>()
-                                                .First(x => x.Id.Value.Equals((int)BuiltInParameter.FAMILY_ALLOW_CUT_WITH_VOIDS)).Set(1);
+                                                .First(x => x.Id.GetValue().Equals((int)BuiltInParameter.FAMILY_ALLOW_CUT_WITH_VOIDS)).Set(1);
                                         }
 
                                         newFFE = false;
@@ -906,8 +907,8 @@ namespace CivilConnection
 
                                     if (isVoid)
                                     {
-                                        form.Parameters.Cast<Autodesk.Revit.DB.Parameter>().First(x => x.Id.Value.Equals((int)BuiltInParameter.ELEMENT_IS_CUTTING)).Set(1);
-                                        famDoc.OwnerFamily.Parameters.Cast<Autodesk.Revit.DB.Parameter>().First(x => x.Id.Value.Equals((int)BuiltInParameter.FAMILY_ALLOW_CUT_WITH_VOIDS)).Set(1);
+                                        form.Parameters.Cast<Autodesk.Revit.DB.Parameter>().First(x => x.Id.GetValue().Equals((int)BuiltInParameter.ELEMENT_IS_CUTTING)).Set(1);
+                                        famDoc.OwnerFamily.Parameters.Cast<Autodesk.Revit.DB.Parameter>().First(x => x.Id.GetValue().Equals((int)BuiltInParameter.FAMILY_ALLOW_CUT_WITH_VOIDS)).Set(1);
                                     }
 
                                     Utils.Log(string.Format("Solid created.", ""));
@@ -979,8 +980,8 @@ namespace CivilConnection
 
                                                 if (isVoid)
                                                 {
-                                                    form.Parameters.Cast<Autodesk.Revit.DB.Parameter>().First(x => x.Id.Value.Equals((int)BuiltInParameter.ELEMENT_IS_CUTTING)).Set(1);
-                                                    famDoc.OwnerFamily.Parameters.Cast<Autodesk.Revit.DB.Parameter>().First(x => x.Id.Value.Equals((int)BuiltInParameter.FAMILY_ALLOW_CUT_WITH_VOIDS)).Set(1);
+                                                    form.Parameters.Cast<Autodesk.Revit.DB.Parameter>().First(x => x.Id.GetValue().Equals((int)BuiltInParameter.ELEMENT_IS_CUTTING)).Set(1);
+                                                    famDoc.OwnerFamily.Parameters.Cast<Autodesk.Revit.DB.Parameter>().First(x => x.Id.GetValue().Equals((int)BuiltInParameter.FAMILY_ALLOW_CUT_WITH_VOIDS)).Set(1);
                                                 }
 
                                                 Utils.Log(string.Format("Form Created.", ""));

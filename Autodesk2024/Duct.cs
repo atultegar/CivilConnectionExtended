@@ -14,6 +14,7 @@
 using Autodesk.DesignScript.Geometry;
 using Autodesk.DesignScript.Runtime;
 using Autodesk.Revit.DB;
+using CivilConnection.Extensions;
 using Revit.GeometryConversion;
 using RevitServices.Persistence;
 using RevitServices.Transactions;
@@ -144,7 +145,7 @@ namespace CivilConnection.MEP
         /// <param name="type">The type.</param>
         private void InternalSetPipingSystemType(Autodesk.Revit.DB.Mechanical.MechanicalSystemType type)
         {
-            if (InternalMEPCurve.MEPSystem.GetTypeId().Value.Equals(type.Id.Value))
+            if (InternalMEPCurve.MEPSystem.GetTypeId().GetValue().Equals(type.Id.GetValue()))
                 return;
 
             TransactionManager.Instance.EnsureInTransaction(DocumentManager.Instance.CurrentDBDocument);

@@ -66,6 +66,12 @@ namespace CivilConnection
         /// The alignment.
         /// </value>
         public Alignment Alignment => new Alignment(_baseline.Alignment);
+
+        /// <summary>
+        /// Gets the corridor.
+        /// </summary>
+        public Corridor Corridor => new Corridor(_baseline.Corridor);
+
         /// <summary>
         /// Gets the start station.
         /// </summary>
