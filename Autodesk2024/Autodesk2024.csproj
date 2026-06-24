@@ -56,10 +56,10 @@
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='2027|AnyCPU'">
 		<DefineConstants>C2027</DefineConstants>
 		<OutputPath>bin\2027\</OutputPath>
-		<DocumentationFile>bin\2027\Autodesk2027.xml</DocumentationFile>
+		<DocumentationFile>bin\2027\CivilConnection2027.xml</DocumentationFile>
 		<TargetFramework>net10.0-windows</TargetFramework>
 		<UseWindowsForms>true</UseWindowsForms>
-		<AssemblyName>Autodesk2027</AssemblyName>
+		<AssemblyName>CivilConnection2027</AssemblyName>
 		<WarningLevel>4</WarningLevel>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
