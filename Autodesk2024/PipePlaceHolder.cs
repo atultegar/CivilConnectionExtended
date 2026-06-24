@@ -13,14 +13,11 @@
 // permissions and limitations under the License.
 using Autodesk.DesignScript.Runtime;
 using Autodesk.Revit.DB;
-using Autodesk.Revit.DB.Mechanical;
-
+using CivilConnection.Extensions;
 using Revit.GeometryConversion;
 
 using RevitServices.Persistence;
 using RevitServices.Transactions;
-using Revit.Elements;
-using System.Collections.Generic;
 
 
 namespace CivilConnection.MEP
@@ -131,7 +128,7 @@ namespace CivilConnection.MEP
         /// <param name="type">The type.</param>
         private void InternalSetPipingSystemType(Autodesk.Revit.DB.Plumbing.PipingSystemType type)
         {
-            if (InternalMEPCurve.MEPSystem.GetTypeId().Value.Equals(type.Id.Value))
+            if (InternalMEPCurve.MEPSystem.GetTypeId().GetValue().Equals(type.Id.GetValue()))
                 return;
 
             TransactionManager.Instance.EnsureInTransaction(DocumentManager.Instance.CurrentDBDocument);

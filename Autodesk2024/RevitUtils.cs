@@ -1,36 +1,39 @@
-﻿// Copyright (c) 2016 Autodesk, Inc. All rights reserved.
-// Author: paolo.serra@autodesk.com
+﻿// Copyright (c) 2016 Autodesk, Inc.
+// Copyright (c) 2026 Atul Tegar
+//
+// Original Author: paolo.serra@autodesk.com
+// Maintained and extended by: atul.tegar@gmail.com
 // 
 // Licensed under the Apache License, Version 2.0 (the "License").
 // You may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
+//
 //    http://www.apache.org/licenses/LICENSE-2.0
 // 
-//  Unless required by applicable law or agreed to in writing, software
+// Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
-// implied.  See the License for the specific language governing
-// permissions and limitations under the License.
-using Autodesk.AECC.Interop.Land;
-using Autodesk.AECC.Interop.Roadway;
-using Autodesk.AECC.Interop.UiRoadway;
-using Autodesk.AutoCAD.Interop.Common;
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 using Autodesk.DesignScript.Geometry;
 using Autodesk.DesignScript.Runtime;
+using CivilConnection.Contracts.Models.Geometry;
+using CivilConnection.Contracts.Models.Requests;
+using CivilConnection.Extensions;
+using CivilConnection.Interop.Services;
 using Revit.Elements;
 using Revit.Elements.Views;
 using Revit.GeometryConversion;
 using RevitServices.Persistence;
 using RevitServices.Transactions;
 using System;
-using System.CodeDom;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Reflection;
-using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using ADSK_Parameters = CivilConnection.UtilsObjectsLocation.ADSK_Parameters;
+using Point = Autodesk.DesignScript.Geometry.Point;
 
 
 namespace CivilConnection
@@ -41,8 +44,7 @@ namespace CivilConnection
     public class RevitUtils
     {
         #region PRIVATE PROPERTIES
-
-
+        
         #endregion
 
         #region PUBLIC PROPERTIES
@@ -55,7 +57,8 @@ namespace CivilConnection
         /// Initializes a new instance of the <see cref="RevitUtils"/> class.
         /// </summary>
         internal RevitUtils()
-        { }
+        {            
+        }
 
         #endregion
 
@@ -93,8 +96,8 @@ namespace CivilConnection
             return new Autodesk.Revit.DB.FilteredElementCollector(view.Document)
                 .WherePasses(filter)
                 .ToElementIds()
-                .Where<Autodesk.Revit.DB.ElementId>(a => a.Value
-                                  != view.Id.Value)
+                .Where<Autodesk.Revit.DB.ElementId>(a => a.GetValue()
+                                  != view.Id.GetValue())
                 .FirstOrDefault<Autodesk.Revit.DB.ElementId>();
         }
 
@@ -294,7 +297,7 @@ namespace CivilConnection
                 if (depth > 0)
                 {
                     internalSection.Parameters.Cast<Autodesk.Revit.DB.Parameter>()
-                        .First(x => x.Id.Value.Equals(
+                        .First(x => x.Id.GetValue().Equals(
                             (int)Autodesk.Revit.DB.BuiltInParameter.VIEWER_BOUND_OFFSET_FAR))
                         .Set(depth);
                 }
@@ -352,7 +355,7 @@ namespace CivilConnection
                     internalPlan.RightDirection.AngleOnPlaneTo(tr.BasisX, Autodesk.Revit.DB.XYZ.BasisZ));
 
                 internalPlan.Parameters.Cast<Autodesk.Revit.DB.Parameter>()
-                        .First(x => x.Id.Value.Equals(
+                        .First(x => x.Id.GetValue().Equals(
                             (int)Autodesk.Revit.DB.BuiltInParameter.PLAN_VIEW_NORTH))
                         .Set(0);  // Project North
 
@@ -383,7 +386,7 @@ namespace CivilConnection
                 if (depth > 0)
                 {
                     internalPlan.Parameters.Cast<Autodesk.Revit.DB.Parameter>()
-                        .First(x => x.Id.Value.Equals(
+                        .First(x => x.Id.GetValue().Equals(
                             (int)Autodesk.Revit.DB.BuiltInParameter.VIEWER_BOUND_OFFSET_FAR))
                         .Set(depth);
                 }
@@ -395,238 +398,7 @@ namespace CivilConnection
 
             return plan;
         }
-
-        /// <summary>
-        /// Returns the sample lines parameters associated to an alignment
-        /// </summary>
-        /// <param name="alignment">The alignment</param>
-        /// <returns></returns>
-        [IsVisibleInDynamoLibrary(false)]
-        public static IList<Dictionary<string, object>> AlignmentSampleLinesParameters(AeccAlignment alignment)
-        {
-            Utils.Log(string.Format("RevitUtils.AlignmentSampleLinesParameters started...", ""));
-
-            Utils.Log(string.Format("Alignment: {0}", alignment.Name));
-
-            var output = new List<Dictionary<string, object>>();
-
-            if (alignment.SampleLineGroups.Count == 0)
-            {
-                string message = "The alignment does not contain any sample line groups.";
-
-                Utils.Log(string.Format("ERROR: {0}", message));
-
-                return output;
-            }
-
-            foreach (AeccSampleLineGroup group in alignment.SampleLineGroups)
-            {
-                IList<double[]> sectionList = new List<double[]>();
-
-                double[] sectionValues = new double[5];
-
-                var slg = new Dictionary<string, object> { { "station", null }, { "lengthLeft", null }, { "lengthRight", null }, { "elevationMin", null }, { "elevationMax", null } };
-
-                Utils.Log(string.Format("SampleLineGroup: {0}", group.Name));
-
-                try
-                {
-                    if (group.SampleLines.Count == 0)
-                    {
-                        string message = "The sample line group does not contain any sample lines.";
-
-                        Utils.Log(string.Format("ERROR: {0}", message));
-                    }
-
-                    foreach (AeccSampleLine line in group.SampleLines)
-                    {
-
-                        try
-                        {
-                            Utils.Log(string.Format("SampleLine: {0} : {1}", line.Name, line.Station));
-
-                            if (line.Sections.Count == 0)
-                            {
-                                string message = "The sample line does not contain any sections.";
-
-                                Utils.Log(string.Format("ERROR: {0}", message));
-
-                                // throw new Exception(message);
-                            }
-
-                            foreach (AeccSection sec in line.Sections)
-                            {
-
-                                Utils.Log(string.Format("Station: {0}, Left: {1}, Right: {2}, Elev. Max: {3}, Elev.Min: {4}", sec.Station, sec.LengthLeft, sec.LengthRight, sec.ElevationMin, sec.ElevationMax));
-
-                                try
-                                {
-                                    sectionList.Add(new double[] { sec.Station, sec.LengthLeft, sec.LengthRight, sec.ElevationMin, sec.ElevationMax });
-                                }
-                                catch (Exception ex)
-                                {
-                                    sectionList.Add(new double[] { sec.Station, 0, 0, 0, 0 });
-
-                                    Utils.Log(string.Format("ERROR: {0}", ex.Message));
-                                }
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            sectionList.Add(new double[] { line.Station, 0, 0, 0, 0 });
-
-                            Utils.Log(string.Format("ERROR: {0}", ex.Message));
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Utils.Log(string.Format("ERROR: {0}", ex.Message));
-                }
-
-                var groups = sectionList.GroupBy(x => x.First()).OrderBy(g => g.Key);
-                var station = groups.Select(g => g.Key);
-                var left = groups.Select(g => g.Min(q => -q[1]));
-                var right = groups.Select(g => g.Max(q => q[2]));
-                var min = groups.Select(g => g.Min(q => q[3]));
-                var max = groups.Select(g => g.Max(q => q[4]));
-
-                slg["station"] = station;
-                slg["lengthLeft"] = left;
-                slg["lengthRight"] = right;
-                slg["elevationMin"] = min;
-                slg["elevationMax"] = max;
-
-                output.Add(slg);
-            }
-
-            Utils.Log(string.Format("RevitUtils.AlignmentSampleLinesParameters completed.", ""));
-
-            return output;
-        }
-
-        /// <summary>
-        /// Returns the sections lines associated to the sample line.
-        /// </summary>
-        /// <param name="line">The sample line.</param>
-        /// <returns></returns>
-        [IsVisibleInDynamoLibrary(false)]
-        public static IList<IList<Line>> GetSampleLinesSections(AeccSampleLine line)
-        {
-            Utils.Log(string.Format("RevitUtils.GetSampleLinesSections started...", ""));
-
-            var output = new List<IList<Line>>();  // Dictionary<string, object>();
-
-            Utils.Log(string.Format("SampleLine: {0} : {1}", line.Name, line.Station));     
-
-            if (line.Sections.Count == 0)
-            {
-                string message = "The sample line does not contain any sections.";
-
-                Utils.Log(string.Format("{0}", message));
-
-                return null;
-            }
-
-            foreach (AeccSection sec in line.Sections)
-            {
-                Utils.Log(string.Format("Section: {0}", sec.Name));
-
-                IList<Line> lines = new List<Line>();
-
-                foreach (AeccSectionLink link in sec.Links)
-                {
-                    Point start = Point.ByCoordinates(link.StartPointX, link.StartPointY, link.StartPointZ);
-
-                    Point end = Point.ByCoordinates(link.EndPointX, link.EndPointY, link.EndPointZ);
-
-                    Utils.Log(string.Format("Start: {0} End: {1}", start, end));
-
-                    if (start.DistanceTo(end) > 0.0001)
-                    {
-                        Line l = Line.ByStartPointEndPoint(start, end);
-
-                        lines.Add(l);
-                    }
-                }
-
-                if (lines.Count > 0)
-                {
-                    output.Add(lines);
-                }
-            }
-
-            Utils.Log(string.Format("RevitUtils.GetSampleLinesSections completed.", ""));
-
-            return output;
-        }
-
-        /// <summary>
-        /// Returns the section lines associated to the sample lines in an alignment
-        /// </summary>
-        /// <param name="alignment">The alignment</param>
-        /// <returns></returns>
-        [IsVisibleInDynamoLibrary(false)]
-        public static IList<Dictionary<double, IList<IList<Line>>>> AlignmentSectionsLines(Alignment alignment)
-        {
-
-            Utils.Log(string.Format("RevitUtils.AlignmentSectionsLines started...", ""));
-
-            Utils.Log(string.Format("Alignment: {0}", alignment.Name));
-
-            var output = new List<Dictionary<double, IList<IList<Line>>>>();
-
-            var alg = (AeccAlignment)alignment.InternalElement;
-
-            if (alg.SampleLineGroups.Count == 0)
-            {
-                string message = "The alignment does not contain any sample line groups.";
-
-                Utils.Log(string.Format("ERROR: {0}", message));
-
-                return null;
-            }
-
-            foreach (AeccSampleLineGroup group in alg.SampleLineGroups)
-            {
-                var slg = new Dictionary<double, IList<IList<Line>>>();
-
-                Utils.Log(string.Format("SampleLineGroup: {0}", group.Name));
-
-                try
-                {
-                    if (group.SampleLines.Count == 0)
-                    {
-                        string message = "The sample line group does not contain any sample lines.";
-
-                        Utils.Log(string.Format("ERROR: {0}", message));
-                    }
-
-                    foreach (AeccSampleLine line in group.SampleLines)
-                    {
-                        var sectionsLines = GetSampleLinesSections(line);
-
-                        if (sectionsLines != null)
-                        {
-                            slg.Add(line.Station, sectionsLines);
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Utils.Log(string.Format("ERROR: {0}", ex.Message));
-                }
-
-                if (slg.Keys.Count > 0)
-                {
-                    output.Add(slg);
-                }
-            }
-
-            Utils.Log(string.Format("RevitUtils.AlignmentSectionsLines completed.", ""));
-
-            return output;
-        }
+        
 
 
         /// <summary>
@@ -637,9 +409,7 @@ namespace CivilConnection
         [MultiReturn(new string[] { "station", "lengthLeft", "lengthRight", "elevationMin", "elevationMax" })]
         public static IList<Dictionary<string, object>> SampleLinesParameters(Baseline baseline)
         {
-            AeccAlignment alignment = baseline.Alignment.InternalElement as AeccAlignment;
-
-            return AlignmentSampleLinesParameters(alignment);
+            return baseline.Alignment.SampleLinesParameters();
         }
 
         /// <summary>
@@ -831,7 +601,7 @@ namespace CivilConnection
 
             try
             {
-                Utils.Log(string.Format("Element {0} Featureline {1}", element.InternalElement.Id.Value, featureline.Code));
+                Utils.Log(string.Format("Element {0} Featureline {1}", element.InternalElement.Id.GetValue(), featureline.Code));
 
                 Autodesk.Revit.DB.Document doc = DocumentManager.Instance.CurrentDBDocument;
 
@@ -849,7 +619,7 @@ namespace CivilConnection
                 var totalTransform = RevitUtils.DocumentTotalTransform();
                 var totalTransformInverse = totalTransform.Inverse();
 
-                if (element.InternalElement.Category.Id.Value.Equals((int)Autodesk.Revit.DB.BuiltInCategory.OST_Floors))
+                if (element.InternalElement.Category.Id.GetValue().Equals((int)Autodesk.Revit.DB.BuiltInCategory.OST_Floors))
                 {
                     // extract vertices
                     // create multipoint object with featureline
@@ -1011,14 +781,14 @@ namespace CivilConnection
 
 
                     // TODO: check Revit length units and perform the conversion accordingly
-                    if (element.InternalElement.Category.Id.Value.Equals((int)Autodesk.Revit.DB.BuiltInCategory.OST_StructuralColumns) ||
-                            element.InternalElement.Category.Id.Value.Equals((int)Autodesk.Revit.DB.BuiltInCategory.OST_Columns))
+                    if (element.InternalElement.Category.Id.GetValue().Equals((int)Autodesk.Revit.DB.BuiltInCategory.OST_StructuralColumns) ||
+                            element.InternalElement.Category.Id.GetValue().Equals((int)Autodesk.Revit.DB.BuiltInCategory.OST_Columns))
                     {
                         Autodesk.Revit.DB.FamilyInstance column = element.InternalElement as Autodesk.Revit.DB.FamilyInstance;
                         if (!column.IsSlantedColumn)
                         {
                             var height = Convert.ToDouble(column.Parameters.Cast<Autodesk.Revit.DB.Parameter>()
-                                .First(x => x.Id.Value.Equals((int)Autodesk.Revit.DB.BuiltInParameter.INSTANCE_LENGTH_PARAM))
+                                .First(x => x.Id.GetValue().Equals((int)Autodesk.Revit.DB.BuiltInParameter.INSTANCE_LENGTH_PARAM))
                                 .AsDouble());
                             lpe = lp.Translate(0, 0, Utils.FeetToM(height)) as Point;
                         }
@@ -1290,11 +1060,11 @@ namespace CivilConnection
                 .OfClass(typeof(Autodesk.Revit.DB.RevitLinkInstance))
                 .Cast<Autodesk.Revit.DB.RevitLinkInstance>())
             {
-                var typeId = rli.Parameters.Cast<Autodesk.Revit.DB.Parameter>().First(x => x.Id.Value.Equals((int)Autodesk.Revit.DB.BuiltInParameter.ELEM_FAMILY_AND_TYPE_PARAM)).AsElementId();
+                var typeId = rli.Parameters.Cast<Autodesk.Revit.DB.Parameter>().First(x => x.Id.GetValue().Equals((int)Autodesk.Revit.DB.BuiltInParameter.ELEM_FAMILY_AND_TYPE_PARAM)).AsElementId();
                 try
                 {
-                    string typeName = Revit.Elements.ElementSelector.ByElementId(typeId.Value).Name;
-                    string name = rli.Parameters.Cast<Autodesk.Revit.DB.Parameter>().First(x => x.Id.Value.Equals((int)Autodesk.Revit.DB.BuiltInParameter.RVT_LINK_INSTANCE_NAME)).AsString();
+                    string typeName = Revit.Elements.ElementSelector.ByElementId((int)typeId.GetValue()).Name;
+                    string name = rli.Parameters.Cast<Autodesk.Revit.DB.Parameter>().First(x => x.Id.GetValue().Equals((int)Autodesk.Revit.DB.BuiltInParameter.RVT_LINK_INSTANCE_NAME)).AsString();
                     string corridor = name.Split(new string[] { "_" }, StringSplitOptions.None)[0];
                     string baseline = name.Split(new string[] { "_" }, StringSplitOptions.None)[1];
                     string code = name.Split(new string[] { "_" }, StringSplitOptions.None)[2];
@@ -1328,117 +1098,39 @@ namespace CivilConnection
         [MultiReturn(new string[] { "IFCOrigin" })]
         public static Dictionary<string, object> ExportIFC(CivilDocument civilDocument, string desktopConnectorFolder = "")
         {
-            Utils.Log(string.Format("RevitUtils.ExportIFC started...", ""));
+            Utils.LogMethodStart(typeof(RevitUtils));
 
-            string folderRVT = "";  // 1.1.0
+            var ifcService = new IfcService();
 
-            try
+            var revitDoc = DocumentManager.Instance.CurrentDBDocument;
+
+            if (revitDoc == null)
+                throw new InvalidOperationException("No active Revit document.");
+
+            if (string.IsNullOrWhiteSpace(revitDoc.PathName))
+                throw new InvalidOperationException("Save the Revit file first before exporting IFC.");
+
+            var projectPosition = ProjectPositionUtils.Instance.ProjectPosition;
+
+            var totalTransform = DocumentTotalTransform();
+
+            var request = new IfcExportRequest
             {
-                folderRVT = Path.GetDirectoryName(DocumentManager.Instance.CurrentDBDocument.PathName);  // 1.1.0
-            }
-            catch (Exception ex)
-            {
-                var message = "Save the Revit file first to a local folder.";
-
-                Utils.Log(string.Format("ERROR: RevitUtils.ExportIFC {0} {1}", message, ex.Message));
-
-                throw new Exception(string.Format("{0}\n{1}", message, ex.Message));  // 1.1.0
-            }
-
-            if (folderRVT == "")
-            {
-                var message = "The Revit file path is invalid, save the file first to a local folder.";
-
-                Utils.Log(string.Format("ERROR: RevitUtils.ExportIFC {0}", message));
-
-                throw new Exception(message);  // 1.1.0
-            }
-
-            if (desktopConnectorFolder != "")
-            {
-                desktopConnectorFolder = Path.GetDirectoryName(desktopConnectorFolder);
-
-                folderRVT = desktopConnectorFolder;
-            }
-
-            AeccRoadwayDocument mDoc = civilDocument._document;
-
-            string original = mDoc.FullName;
-
-            string ifcOrigin = "";
-
-            IList<AcadEntity> cSolids = new List<AcadEntity>();
-
-            // Civil 3D 2020 Reference to type 'AcadModelSpace' claims it is defined in 'Autodesk.AutoCAD.Interop', but it could not be found
-
-            AcadDatabase db = mDoc as AcadDatabase;
-
-            AcadModelSpace ams = db.ModelSpace;
-
-            if (ams != null)
-            {
-                for (int i = 0; i < ams.Count; ++i)
+                OutputFolder = desktopConnectorFolder,
+                Origin = new PointData
                 {
-                    if (ams.Item(i).EntityName.Contains("Solid") ||
-                        ams.Item(i).EntityName.Contains("Body") ||
-                        ams.Item(i).EntityName.Contains("Surface") ||
-                        ams.Item(i).EntityName.Contains("Face") ||
-                        ams.Item(i).EntityName.Contains("MassElement"))
-                    {
-                        cSolids.Add(ams.Item(i));
-                    }
-                }
-            }
-            else
-            {
-                Utils.Log(string.Format("ERROR: AcadModelSpace is null.", ""));
-            }
+                    X = totalTransform.Origin.X,
+                    Y = totalTransform.Origin.Y,
+                    Z = totalTransform.Origin.Z
 
-            var totalTransform = RevitUtils.DocumentTotalTransform();
+                },
+                RotationAngle = projectPosition.Angle
+            };
 
-            if (cSolids.Count > 0)
-            {
-                Point origin = totalTransform.Origin;
+            string ifcPath = ifcService.ExportIFC(civilDocument.InternalElement, request);
+                        
 
-                Autodesk.Revit.DB.ProjectLocation location = DocumentManager.Instance.CurrentDBDocument.ActiveProjectLocation;
-
-                Autodesk.Revit.DB.ProjectPosition position = ProjectPositionUtils.Instance.ProjectPosition;
-
-                double[] end = new double[] { origin.X, origin.Y, origin.Z };
-
-                foreach (AcadEntity cs in cSolids)
-                {
-                    cs.Rotate(new double[] { 0, 0, 0 }, -position.Angle);
-
-                    cs.Move(new double[] { 0, 0, 0 }, end);
-                }
-
-                var name = Path.GetFileNameWithoutExtension(original);
-
-                ifcOrigin = Path.Combine(folderRVT, name + "_Origin.ifc");
-
-                if (File.Exists(ifcOrigin))
-                {
-                    File.Delete(ifcOrigin);
-                }
-
-                mDoc.SendCommand("-IFCEXPORT\nNumber\n\n" + ifcOrigin + "\ne\n");
-
-                end = new double[] { -origin.X, -origin.Y, -origin.Z };
-
-                foreach (AcadEntity cs in cSolids)
-                {
-                    cs.Move(new double[] { 0, 0, 0 }, end);
-
-                    cs.Rotate(new double[] { 0, 0, 0 }, position.Angle);
-                }
-
-                // mDoc.Save();  20200622 avoid to save when the DWG is open in read only mode
-            }
-
-            Utils.Log(string.Format("RevitUtils.ExportIFC completed.", ""));
-
-            return new Dictionary<string, object>() { { "IFCOrigin", ifcOrigin } };
+            return new Dictionary<string, object>() { { "IFCOrigin", ifcPath } };
         }
 
         /// <summary>
@@ -1752,6 +1444,31 @@ namespace CivilConnection
             
             return output;
 
+        }
+
+        #endregion
+
+        #region INTERNAL METHODS
+
+        internal static IList<string> GetHandlesFromParameter(Revit.Elements.Element element, string parameter)
+        {
+            try
+            {
+                var value = Convert.ToString(element.GetParameterValueByName(parameter));
+
+                if (string.IsNullOrWhiteSpace(value))
+                    return new List<string>();
+
+                return value
+                    .Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+                    .Select(x => x.Trim())
+                    .Distinct()
+                    .ToList();
+            }
+            catch
+            {
+                return new List<string>();
+            }
         }
 
         #endregion

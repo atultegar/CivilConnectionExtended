@@ -1,26 +1,32 @@
-﻿// Copyright (c) 2024 Autodesk, Inc. All rights reserved.
-// Author: paolo.serra@autodesk.com, atul.tegar@gmail.com
+﻿// Copyright (c) 2016 Autodesk, Inc.
+// Copyright (c) 2026 Atul Tegar
+//
+// Original Author: paolo.serra@autodesk.com
+// Maintained and extended by: atul.tegar@gmail.com
 // 
 // Licensed under the Apache License, Version 2.0 (the "License").
 // You may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
+//
 //    http://www.apache.org/licenses/LICENSE-2.0
 // 
-//  Unless required by applicable law or agreed to in writing, software
+// Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
-// implied.  See the License for the specific language governing
-// permissions and limitations under the License.
-using Autodesk.AECC.Interop.Land;
-using Autodesk.AECC.Interop.UiRoadway;
-using Autodesk.AutoCAD.Interop;
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+
 using Autodesk.DesignScript.Runtime;
 using Autodesk.Revit.DB;
+using CivilConnection.Contracts.Models;
+using CivilConnection.Interop.Context;
+using CivilConnection.Interop.Services;
+using RevitServices.Persistence;
 using System;
-using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 
 namespace CivilConnection
 {
@@ -29,205 +35,312 @@ namespace CivilConnection
     /// </summary>
     public class CivilApplication
     {
+        #region PRIVATE FIELDS
+
+        private readonly CivilContext _context;
+
+        private readonly DocumentService _documentService;
+
+        #endregion
+
+        #region PUBLIC PROPERTIES
+
         /// <summary>
         /// The documents in Civil 3D.
         /// </summary>
-        public IList<CivilDocument> Documents;
-        /// <summary>
-        /// The land XML path.
-        /// </summary>
-        public string LandXMLPath;
+        public IList<CivilDocument> Documents { get; private set; }
+
         /// <summary>
         /// The active document
         /// </summary>
-        AcadDocument ActiveDocument;
+        public CivilDocument ActiveDocument { get; private set; }
+
         /// <summary>
-        /// The active application
+        /// The land XML path.
         /// </summary>
-        AeccRoadwayApplication mApp;
+        public string LandXMLPath { get; private set; }
+
         /// <summary>
-        /// Gets the internal element.
+        /// Gets the Civil 3D version.
+        /// </summary>
+        public string Version => _context?.Host?.VersionInfo.Version;
+
+        /// <summary>
+        /// Gets the AutoCAD version.
+        /// </summary>
+        public string AcadVersion => _context?.Host?.VersionInfo.AutoCADVersion;
+
+        /// <summary>
+        /// Gets the Civil version.
+        /// </summary>
+        public string CivilVersion => _context?.Host?.VersionInfo.CivilVersion;
+                        
+        /// <summary>
+        /// Gets the internal COM application.
         /// </summary>
         /// <value>
         /// The internal element.
         /// </value>
-        internal object InternalElement { get { return this.mApp; } }
+        internal object InternalElement => _context?.Host?.Application;
+
+        internal CivilContext Context => _context;
+
+        #endregion
+
+        #region CONSTRUCTOR
 
         /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="rclsid"></param>
-        /// <param name="reserved"></param>
-        /// <param name="ppunk"></param>
-        /// <returns></returns>
-        [DllImport("ole32.dll")]
-        public static extern int GetActiveObjectExt(ref Guid rclsid, IntPtr reserved, [MarshalAs(UnmanagedType.Interface)] out object ppunk);
-
-        /// <summary>
-        /// Gets the application
-        /// </summary>
-        /// <returns></returns>
-        /// <exception cref="Exception"></exception>
-        internal AeccRoadwayApplication GetApplication()
-        {
-            Utils.Log($"GetApplication started...");
-            string m_sAcadProdID = "AutoCAD.Application";
-
-            string[] progids = null;
-
-#if C2023
-            progids = new string[] {"AeccXUiRoadway.AeccRoadwayApplication.13.5"}; // 2023
-#elif C2024
-            progids = new string[] { "AeccXUiRoadway.AeccRoadwayApplication.13.6" }; // 2024
-#elif C2025
-            progids = new string[] { "AeccXUiRoadway.AeccRoadwayApplication.13.7" }; // 2025
-#elif C2026
-            progids = new string[] { "AeccXUiRoadway.AeccRoadwayApplication.13.8" }; // 2026
-#endif
-            AcadApplication m_oAcadApp = null;
-            try
-            {
-                object obj = null;
-                var type = Type.GetTypeFromProgID(m_sAcadProdID);
-                var guid = type.GUID;
-                int result = GetActiveObjectExt(ref guid, IntPtr.Zero, out obj);
-
-                if (obj != null)
-                {
-                    m_oAcadApp = obj as AcadApplication;                    
-                }
-            }
-            catch (Exception ex) 
-            {
-                throw new Exception(ex.Message);
-            }
-
-            // Roadway Application
-
-            dynamic output = null;
-
-            foreach (string r_sAeccAppProgId in progids) 
-            {
-                try
-                {
-                    output = m_oAcadApp.GetInterfaceObject(r_sAeccAppProgId);
-
-                    if (output != null)
-                    {
-                        break;
-                    }                        
-                }
-                catch (COMException ex) 
-                {
-                    if (!ex.ToString().Contains("0x800401E3"))
-                    {
-                        throw new Exception("Civil 3D Communication Error");
-                    }
-                }
-                catch (Exception) 
-                {
-
-                }
-            }
-
-            Utils.Log($"GetApplication completed.");
-            return output;
-        }
-
-        /// <summary>
-        /// Creates the connection with the running session of Civil 3D.
+        /// Creates the connection with the running sessions of Civil 3D.
         /// </summary>
         /// <exception cref="Exception"></exception>
         public CivilApplication()
         {
             Utils.InitializeLog();
-            Utils.Log($"CivilApplication.CivilApplication started...");
+            Utils.Log($"CivilApplication started...");
             try
             {
-                this.mApp = this.GetApplication();
+                string revitVersion = DocumentManager.Instance.CurrentDBDocument.Application.VersionNumber.ToString();
+
+                var contexts = CivilContext.CreateAllContext();
+
+                Utils.Log($"Revit Version: {revitVersion}");
+
+                if (contexts.Count == 0)
+                    throw new Exception("No running Civil 3D instances found.");
+
+                _context = contexts.FirstOrDefault(x => x.Host.VersionInfo.Version.StartsWith(revitVersion)) ?? contexts.FirstOrDefault();
+
+                Utils.Log($"Selected Civil 3D Host: {_context.Host.VersionInfo.Version}");
+               
+                _documentService = new DocumentService();
+
+                Initialize();
             }
             catch (Exception ex) 
             {
-                Utils.Log($"EXCEPTION: {ex.Message}");
-            }
+                Utils.Log($"ERROR: {ex.Message}");
 
-            if (this.mApp == null) 
+                throw new Exception("Could not connect to a running Civil 3D instance", ex);
+            }            
+        }
+        
+        internal CivilApplication(string version)
+        {
+            Utils.InitializeLog();
+            Utils.Log($"CivilApplication({version}) started...");
+            try
             {
-                Utils.Log($"ERROR: Cannot connect to the Civil 3D Application");
-                return;
+                _context = CivilContext.Create(version);
+
+                _documentService = new DocumentService();
+
+                Initialize();
             }
-
-            IList<CivilDocument> documents = new List<CivilDocument>();
-
-            foreach (var doc in this.mApp.Documents) 
+            catch (Exception ex)
             {
-                documents.Add(new CivilDocument(doc as AeccRoadwayDocument));
+                Utils.Log($"ERROR: {ex.Message}");
+
+                throw new Exception($"Could not connect to Civil 3D {version}\n" + ex.Message, ex);
             }
+        }
 
-            this.Documents = documents;
-            this.ActiveDocument = mApp.ActiveDocument;
+        /// <summary>
+        /// Creates the connection to a specific Civil 3D version.
+        /// </summary>
+        /// <param name="version">
+        /// Civil 3D version year.
+        /// Example: 2023, 2024, 2025...
+        /// </param>
+        public static CivilApplication ByVersion(string version)
+        {
+            return new CivilApplication(version);
+        }
 
-            var revitDoc = RevitServices.Persistence.DocumentManager.Instance.CurrentDBDocument;
+        #endregion
 
-            RevitServices.Transactions.TransactionManager.Instance.EnsureInTransaction(revitDoc);
+        #region INITIALIZATION
 
-            SetUnits(revitDoc);
+        /// <summary>
+        /// Initializes services and documents.
+        /// </summary>
+        private void Initialize()
+        {
+            LoadDocuments();
 
-            RevitServices.Transactions.TransactionManager.Instance.TransactionTaskDone();
+            InitializeSession();
 
-            Utils.Log($"CivilApplication.Units completed.");
+            InitializeRevitUnits();
+        }
 
-            SessionVariables.LandXMLPath = System.IO.Path.GetTempPath();
+        /// <summary>
+        /// Loads Civil documents.
+        /// </summary>
+        private void LoadDocuments()
+        {
+            var docs = _documentService.GetDocuments(_context);
+
+            Documents = docs
+                .Select(x => new CivilDocument(x))
+                .ToList();
+
+            var activeDoc = _documentService.GetActiveDocument(_context);
+
+            if (activeDoc != null)
+            {
+                ActiveDocument = new CivilDocument(activeDoc);
+            }
+        }
+
+        /// <summary>
+        /// Initializes session variables.
+        /// </summary>
+        private void InitializeSession()
+        {
+            LandXMLPath = Path.GetTempPath();
+
+            SessionVariables.LandXMLPath = LandXMLPath;
             SessionVariables.IsLandXMLExported = false;
             SessionVariables.CivilApplication = this;
             SessionVariables.ParametersCreated = false;
             SessionVariables.DocumentTotalTransform = null;
-            RevitUtils.DocumentTotalTransform();
         }
 
         /// <summary>
-        /// Returns the list of Civil Documents opened in Civil 3D.
+        /// Initializes Revit units based on Civil document.
+        /// </summary>
+        private void InitializeRevitUnits()
+        {
+            try
+            {
+                if (Documents == null || Documents.Count == 0)
+                    return;
+
+                var revitDoc = RevitServices.Persistence.DocumentManager.Instance.CurrentDBDocument;
+
+                if (revitDoc == null)
+                    return;
+
+                RevitServices.Transactions.TransactionManager.Instance.EnsureInTransaction(revitDoc);
+
+                SetUnits(revitDoc);
+
+                RevitServices.Transactions.TransactionManager.Instance.TransactionTaskDone();
+
+                Utils.Log($"CivilApplication.Units completed.");
+            }
+            catch (Exception ex)
+            {
+                Utils.Log($"SetUnits ERROR: {ex}");
+            }
+        }
+
+        #endregion
+
+        #region PUBLIC METHODS
+
+        /// <summary>
+        /// Returns all Civil documents.
         /// </summary>
         /// <returns></returns>
         public IList<CivilDocument> GetDocuments()
         {
-            return this.Documents;
+            return Documents;
         }
 
         /// <summary>
-        /// Returns the Civil Documents opened in Civil 3D with the same name.
+        /// Returns Civil document by name.
         /// </summary>
         /// <param name="name"></param>
         /// <returns></returns>
         public CivilDocument GetDocumentByName(string name)
         {
-            return this.Documents.First(x => x.Name == name);
+            return Documents.First(x => x.Name == name);
         }
 
         /// <summary>
-        /// Enables the Run Periodically mode and updates the connection with Civil 3D.
+        /// Reconnects to Civil 3D.
         /// </summary>
         /// <returns></returns>
-        [CanUpdatePeriodicallyAttribute(true)]
+        [CanUpdatePeriodically(true)]
         public CivilApplication UpdatePeriodically()
         {
-            Utils.Log($"CivilApplication.UpdatePeriodically started...");
+            Utils.Log("CivilApplication.UpdatePeriodically started...");
+
+            if (!string.IsNullOrWhiteSpace(Version))
+            {
+                return new CivilApplication(Version);
+            }
 
             return new CivilApplication();
         }
 
         /// <summary>
-        /// Writes a message to the log file
+        /// Writes message to log.
         /// </summary>
         /// <param name="data">The data that is passed through</param>
         /// <param name="message">An optional message to write to the log.</param>
         /// <returns></returns>
         public static object WriteToLog(object data, string message = "")
         {
-            Utils.Log(string.Format("{0}{1}", message.Length > 0 ? message + " " : "", data));
+            Utils.Log($"{(message.Length > 0 ? message + " " : "")}{data}");
 
             return data;
         }
+
+        #endregion
+
+        #region PRIVATE METHODS
+
+        /// <summary>
+        /// Sets Revit units based on Civil 3D document units.
+        /// </summary>
+        /// <param name="revitDoc"></param>
+        /// <exception cref="Exception"></exception>
+        private void SetUnits(Document revitDoc)
+        {
+            if (Documents == null || Documents.Count == 0) 
+                return;
+
+            var firstDoc = Documents.First();
+
+            var settings = _documentService.GetUnitSettings(firstDoc._document);
+
+            ApplyRevitUnits(revitDoc, settings);
+            
+        }
+
+        private static void ApplyRevitUnits(Document revitDoc, UnitSettings settings)
+        {
+            Units units = revitDoc.GetUnits();
+
+            var map = new Dictionary<DrawingUnitType, ForgeTypeId>
+            {
+                { DrawingUnitType.Feet, UnitTypeId.Feet },
+                { DrawingUnitType.Meters, UnitTypeId.Meters },
+                { DrawingUnitType.Millimeters, UnitTypeId.Millimeters },
+                { DrawingUnitType.Centimeters, UnitTypeId.Centimeters },
+                { DrawingUnitType.Decimeters, UnitTypeId.Decimeters },
+                { DrawingUnitType.Inches, UnitTypeId.Inches }
+            };
+
+            if (!map.TryGetValue(settings.DrawingUnit, out var unitTypeId))
+            {
+                throw new Exception("The Civil 3D units are not supported in Revit.");
+            }
+
+            var formatOptions = new FormatOptions(unitTypeId)
+            {
+                Accuracy = settings.Accuracy
+            };
+
+            units.SetFormatOptions(SpecTypeId.Length, formatOptions);
+
+            revitDoc.SetUnits(units);
+        }
+
+        #endregion
+
+        #region OVERRIDES
 
         /// <summary>
         /// Public textual representation of the Dynamo node preview.
@@ -238,44 +351,6 @@ namespace CivilConnection
             return $"CivilApplication(ActiveDocument = {this.ActiveDocument.Name})";
         }
 
-        /// <summary>
-        /// Setting Revit units based on Civil 3D document units
-        /// </summary>
-        /// <param name="revitDoc"></param>
-        /// <exception cref="Exception"></exception>
-        private void SetUnits(Autodesk.Revit.DB.Document revitDoc)
-        {
-            Autodesk.Revit.DB.Units units = revitDoc.GetUnits();
-            var du = this.Documents.First()._document.Settings.DrawingSettings.UnitZoneSettings.DrawingUnits;
-            var distPrecision = this.Documents.First()._document.Settings.DrawingSettings.AmbientSettings.DistanceSettings.Precision.Value;
-            double accuracy = Math.Pow(10, -distPrecision);
-
-            Utils.Log($"CivilApplication.Units started...");
-
-            var unitTypeMapping = new Dictionary<AeccDrawingUnitType, ForgeTypeId>
-            {
-                {AeccDrawingUnitType.aeccDrawingUnitMeters, UnitTypeId.Meters },
-                {AeccDrawingUnitType.aeccDrawingUnitDecimeters, UnitTypeId.Decimeters },
-                {AeccDrawingUnitType.aeccDrawingUnitCentimeters, UnitTypeId.Centimeters },
-                {AeccDrawingUnitType.aeccDrawingUnitMillimeters, UnitTypeId.Millimeters },
-                {AeccDrawingUnitType.aeccDrawingUnitFeet, UnitTypeId.Feet },
-                {AeccDrawingUnitType.aeccDrawingUnitInches, UnitTypeId.Inches }
-            };
-
-            if(unitTypeMapping.TryGetValue(du,out var unitTypeId))
-            {
-                Utils.Log($"Civil Document in {unitTypeId.ToString()}");
-
-                var formatOptions = new FormatOptions(unitTypeId) { Accuracy = accuracy };
-
-                units.SetFormatOptions(SpecTypeId.Length, formatOptions);
-            }
-            else
-            {
-                throw new Exception("UNITS ERROR\nThe Civil 3D units of the Active Document are not supported in Revit.\nChange the Civil 3D Units to continue");
-            }
-
-            revitDoc.SetUnits(units);
-        }
+        #endregion
     }
 }

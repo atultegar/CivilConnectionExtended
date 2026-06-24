@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	
+	<PropertyGroup>
+		
+		<TargetFramework>netstandard2.0</TargetFramework>
+
+		<RootNamespace>CivilConnection.Contracts</RootNamespace>
+
+		<AssemblyName>CivilConnection.Contracts</AssemblyName>
+
+		<Nullable>enable</Nullable>
+
+		<LangVersion>latest</LangVersion>
+
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+		
+	</PropertyGroup>
+	
+</Project>
+

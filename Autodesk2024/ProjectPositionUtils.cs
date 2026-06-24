@@ -16,8 +16,6 @@ using RevitServices.Persistence;
 using System;
 
 
-
-
 namespace CivilConnection
 {
     /// <summary>

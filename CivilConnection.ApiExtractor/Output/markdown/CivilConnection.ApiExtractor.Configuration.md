@@ -1,0 +1,3 @@
+# CivilConnection.ApiExtractor.Configuration
+## ExtractorSettings
+

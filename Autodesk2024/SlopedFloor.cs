@@ -14,6 +14,7 @@
 using Autodesk.DesignScript.Geometry;
 using Autodesk.DesignScript.Runtime;
 using Autodesk.Revit.DB;
+using CivilConnection.Extensions;
 using Revit.GeometryConversion;
 using RevitServices.Persistence;
 using RevitServices.Transactions;
@@ -219,7 +220,7 @@ namespace CivilConnection
                 {
                     var f = Revit.Elements.Floor.ByOutlineTypeAndLevel(flat, floorType, level);
                     f.InternalElement.Parameters.Cast<Autodesk.Revit.DB.Parameter>()
-                        .First(x => x.Id.Value.Equals(Autodesk.Revit.DB.BuiltInParameter.FLOOR_PARAM_IS_STRUCTURAL))
+                        .First(x => x.Id.GetValue().Equals(Autodesk.Revit.DB.BuiltInParameter.FLOOR_PARAM_IS_STRUCTURAL))
                         .Set(structural ? 1 : 0);
 
                     plane.Dispose();

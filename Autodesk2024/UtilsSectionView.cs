@@ -14,13 +14,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 using System.IO;
 
 using Autodesk.Revit.DB;
-using Autodesk.Revit.UI;
 
 using RevitServices.Persistence;
 using Autodesk.DesignScript.Runtime;
@@ -309,7 +306,12 @@ namespace CivilConnection
             Curve cc = null;
             Dictionary<double, Curve> pairs = new Dictionary<double, Curve>();
             if (!ca.IsCyclic && !cb.IsCyclic &&
-               ca.Intersect(cb) != SetComparisonResult.Disjoint &&
+
+#if (C2026 || C2027)
+                ca.Intersect(cb, CurveIntersectResultOption.Simple).Result != SetComparisonResult.Disjoint &&
+#else
+                ca.Intersect(cb) != SetComparisonResult.Disjoint &&
+#endif
                (ca.GetEndPoint(1) - ca.GetEndPoint(0))
                .CrossProduct(cb.GetEndPoint(1) - cb.GetEndPoint(0))
                .IsAlmostEqualTo(XYZ.Zero)

@@ -1,0 +1,125 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net48</TargetFramework>
+
+		<RootNamespace>CivilConnection.Interop</RootNamespace>
+
+		<AssemblyName>CivilConnection.Interop</AssemblyName>
+
+		<Platforms>AnyCPU</Platforms>
+
+		<Configurations>
+			Debug;
+			Release;
+			2023;
+			2024;
+			2025;
+			2026;
+			2027
+		</Configurations>
+
+		<LangVersion>latest</LangVersion>
+
+		<Nullable>enable</Nullable>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)'=='2023'">
+		<DefineConstants>C2023</DefineConstants>
+		<C3DVersion>2023</C3DVersion>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)'=='2024'">
+		<DefineConstants>C2024</DefineConstants>
+		<C3DVersion>2024</C3DVersion>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)'=='2025'">
+		<DefineConstants>C2025</DefineConstants>
+		<C3DVersion>2025</C3DVersion>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)'=='2026'">
+		<DefineConstants>C2026</DefineConstants>
+		<C3DVersion>2026</C3DVersion>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)'=='2027'">
+		<DefineConstants>C2027</DefineConstants>
+		<C3DVersion>2027</C3DVersion>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\CivilConnection.Contracts\CivilConnection.Contracts.csproj" />
+	</ItemGroup>
+
+
+	<!--References-->
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
+	</ItemGroup>
+
+	<ItemGroup>
+
+		<Reference Include="Autodesk.AECC.Interop.Land">
+			<HintPath>C:\Program Files\Autodesk\AutoCAD $(C3DVersion)\C3D\Autodesk.AECC.Interop.Land.dll</HintPath>
+			<EmbedInteropTypes>False</EmbedInteropTypes>
+			<Private>False</Private>
+			<SpecificVersion>False</SpecificVersion>
+		</Reference>
+
+		<Reference Include="Autodesk.AECC.Interop.Roadway">
+			<HintPath>C:\Program Files\Autodesk\AutoCAD $(C3DVersion)\C3D\Autodesk.AECC.Interop.Roadway.dll</HintPath>
+			<EmbedInteropTypes>False</EmbedInteropTypes>
+			<Private>False</Private>
+			<SpecificVersion>False</SpecificVersion>
+		</Reference>
+
+		<Reference Include="Autodesk.AutoCAD.Interop">
+			<HintPath>C:\Program Files\Autodesk\AutoCAD $(C3DVersion)\Autodesk.AutoCAD.Interop.dll</HintPath>
+			<EmbedInteropTypes>False</EmbedInteropTypes>
+			<Private>False</Private>
+			<SpecificVersion>False</SpecificVersion>
+		</Reference>
+
+		<Reference Include="Autodesk.AutoCAD.Interop.Common">
+			<HintPath>C:\Program Files\Autodesk\AutoCAD $(C3DVersion)\Autodesk.AutoCAD.Interop.Common.dll</HintPath>
+			<EmbedInteropTypes>False</EmbedInteropTypes>
+			<Private>False</Private>
+			<SpecificVersion>False</SpecificVersion>
+		</Reference>
+
+		<Reference Include="Autodesk.AEC.Interop.Base">
+			<HintPath>C:\Program Files\Autodesk\AutoCAD $(C3DVersion)\ACA\Autodesk.AEC.Interop.Base.dll</HintPath>
+			<EmbedInteropTypes>False</EmbedInteropTypes>
+			<Private>False</Private>
+			<SpecificVersion>False</SpecificVersion>
+		</Reference>
+		<Reference Include="Autodesk.AEC.Interop.UIBase">
+			<HintPath>C:\Program Files\Autodesk\AutoCAD $(C3DVersion)\ACA\Autodesk.AEC.Interop.UIBase.dll</HintPath>
+			<EmbedInteropTypes>False</EmbedInteropTypes>
+			<Private>False</Private>
+			<SpecificVersion>False</SpecificVersion>
+		</Reference>
+
+		<Reference Include="Autodesk.AECC.Interop.UiLand">
+			<HintPath>C:\Program Files\Autodesk\AutoCAD $(C3DVersion)\C3D\Autodesk.AECC.Interop.UiLand.dll</HintPath>
+			<EmbedInteropTypes>False</EmbedInteropTypes>
+			<Private>False</Private>
+			<SpecificVersion>False</SpecificVersion>
+		</Reference>
+		<Reference Include="Autodesk.AECC.Interop.UiRoadway">
+			<HintPath>C:\Program Files\Autodesk\AutoCAD $(C3DVersion)\C3D\Autodesk.AECC.Interop.UiRoadway.dll</HintPath>
+			<EmbedInteropTypes>False</EmbedInteropTypes>
+			<Private>False</Private>
+			<SpecificVersion>False</SpecificVersion>
+		</Reference>
+
+	</ItemGroup>
+
+	<ItemGroup>
+		<Folder Include="Extensions\" />
+	</ItemGroup>
+
+</Project>

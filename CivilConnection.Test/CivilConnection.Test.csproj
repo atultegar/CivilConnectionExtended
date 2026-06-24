@@ -1,0 +1,64 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		
+		<TargetFramework>net48</TargetFramework>
+
+		<RootNamespace>CivilConnection.Test</RootNamespace>
+
+		<AssemblyName>CivilConnection.Test</AssemblyName>
+
+		<Platforms>AnyCPU</Platforms>
+
+		<Configurations>
+			Debug;
+			Release;
+			2023;
+			2024;
+			2025;
+			2026;
+			2027
+		</Configurations>
+
+		<LangVersion>latest</LangVersion>
+
+		<Nullable>enable</Nullable>
+		
+	</PropertyGroup>
+
+	<!--Civil Version-->
+	
+	<PropertyGroup Condition="'$(Configuration)'=='2023'">
+		<DefineConstants>C2023</DefineConstants>
+		<C3DVersion>2023</C3DVersion>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)'=='2024'">
+		<DefineConstants>C2024</DefineConstants>
+		<C3DVersion>2024</C3DVersion>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)'=='2025'">
+		<DefineConstants>C2025</DefineConstants>
+		<C3DVersion>2025</C3DVersion>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)'=='2026'">
+		<DefineConstants>C2026</DefineConstants>
+		<C3DVersion>2026</C3DVersion>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)'=='2027'">
+		<DefineConstants>C2027</DefineConstants>
+		<C3DVersion>2027</C3DVersion>
+	</PropertyGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\CivilConnection.Interop\CivilConnection.Interop.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="Helpers\" />
+	</ItemGroup>
+	
+</Project>

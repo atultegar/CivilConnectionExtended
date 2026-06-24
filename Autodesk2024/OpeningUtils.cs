@@ -11,33 +11,13 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
 // implied.  See the License for the specific language governing
 // permissions and limitations under the License.
-using System;
+using Autodesk.DesignScript.Geometry;
+using Autodesk.Revit.DB;
+using CivilConnection.Extensions;
+using Revit.GeometryConversion;
+using RevitServices.Persistence;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Xml;
-using System.IO;
-
-using Revit.Application;
-using Revit.Elements.Views;
-using Revit.Elements;
-using Revit.Transaction;
-using RevitServices.Transactions;
-using RevitServices.Persistence;
-
-using Autodesk.DesignScript.Runtime;
-using Autodesk.DesignScript.Geometry;
-using Revit.GeometryConversion;
-
-using Autodesk.AECC.Interop.Roadway;
-using Autodesk.AECC.Interop.UiRoadway;
-using Autodesk.AECC.Interop.Land;
-using Autodesk.AECC.Interop.UiLand;
-
-using Autodesk.AutoCAD.Interop.Common;
-
-using Autodesk.Revit.DB;
 
 namespace CivilConnection
 {
@@ -106,9 +86,9 @@ namespace CivilConnection
                                  .WhereElementIsNotElementType()
                                  .Where(x =>
                                         x.Parameters.Cast<Autodesk.Revit.DB.Parameter>()
-                                        .First(p => p.Id.Value == (int)BuiltInParameter.ALL_MODEL_INSTANCE_COMMENTS).HasValue))
+                                        .First(p => p.Id.GetValue() == (int)BuiltInParameter.ALL_MODEL_INSTANCE_COMMENTS).HasValue))
             {
-                string comments = e.Parameters.Cast<Autodesk.Revit.DB.Parameter>().First(p => p.Id.Value == (int)BuiltInParameter.ALL_MODEL_INSTANCE_COMMENTS).AsString();
+                string comments = e.Parameters.Cast<Autodesk.Revit.DB.Parameter>().First(p => p.Id.GetValue() == (int)BuiltInParameter.ALL_MODEL_INSTANCE_COMMENTS).AsString();
 
                 if (comments.ToLower() != "opening")
                 {
@@ -173,11 +153,11 @@ namespace CivilConnection
                          .WhereElementIsNotElementType()
                          .Where(x =>
                                 x.Parameters.Cast<Autodesk.Revit.DB.Parameter>()
-                                .First(p => p.Id.Value == (int)BuiltInParameter.ALL_MODEL_INSTANCE_COMMENTS).HasValue))
+                                .First(p => p.Id.GetValue() == (int)BuiltInParameter.ALL_MODEL_INSTANCE_COMMENTS).HasValue))
                 {
                     Transform tr = rli.GetTotalTransform();
 
-                    string comments = e.Parameters.Cast<Autodesk.Revit.DB.Parameter>().First(p => p.Id.Value == (int)BuiltInParameter.ALL_MODEL_INSTANCE_COMMENTS).AsString();
+                    string comments = e.Parameters.Cast<Autodesk.Revit.DB.Parameter>().First(p => p.Id.GetValue() == (int)BuiltInParameter.ALL_MODEL_INSTANCE_COMMENTS).AsString();
 
                     if (comments.ToLower() != "opening")
                     {

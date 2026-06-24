@@ -1,19 +1,24 @@
-﻿// Copyright (c) 2017 Autodesk, Inc. All rights reserved.
-// Author: paolo.serra@autodesk.com
+﻿// Copyright (c) 2017 Autodesk, Inc.
+// Copyright (c) 2026 Atul Tegar
+//
+// Original Author: paolo.serra@autodesk.com
+// Maintained and extended by: atul.tegar@gmail.com
 // 
 // Licensed under the Apache License, Version 2.0 (the "License").
 // You may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
+//
 //    http://www.apache.org/licenses/LICENSE-2.0
 // 
-//  Unless required by applicable law or agreed to in writing, software
+// Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
-// implied.  See the License for the specific language governing
-// permissions and limitations under the License.
-using Autodesk.AECC.Interop.Roadway;
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 using Autodesk.DesignScript.Geometry;
 using Autodesk.DesignScript.Runtime;
+using CivilConnection.Interop.Wrappers;
 using System.Collections.Generic;
 
 namespace CivilConnection
@@ -26,9 +31,9 @@ namespace CivilConnection
     {
         #region PRIVATE PROPERTIES
 
-        internal AeccAppliedAssembly _assembly;
-        internal AeccAppliedSubassemblies _appliedSubassemblies;
-        internal AeccCorridor _corridor;
+        internal readonly AppliedAssemblyWrapper _assembly;
+        internal dynamic _appliedSubassemblies;
+        internal CorridorWrapper _corridor;
         internal BaselineRegion _region;
         
         internal object InternalElement { get { return this._assembly; } }
@@ -42,12 +47,12 @@ namespace CivilConnection
         /// <param name="blr">The BaselineRegion</param>
         /// <param name="appliedAssembly">the AeccAppliedAssembly form Civil 3D.</param>
         /// <param name="corridor">the AeccCorridor from Civil 3D.</param>
-        internal AppliedAssembly(BaselineRegion blr, AeccAppliedAssembly appliedAssembly, AeccCorridor corridor)
+        internal AppliedAssembly(BaselineRegion blr, AppliedAssemblyWrapper appliedAssembly, CorridorWrapper corridor)
         {
-            this._region = blr;
-            this._assembly = appliedAssembly;
-            this._appliedSubassemblies = appliedAssembly.AppliedSubassemblies;
-            this._corridor = corridor;
+            _assembly = appliedAssembly;
+            _region = blr;            
+            _appliedSubassemblies = appliedAssembly.AppliedSubassemblies;
+            _corridor = corridor;
         }
 
         #endregion
